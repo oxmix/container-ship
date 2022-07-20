@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+
+NAME='container-ship'
+VERSION='1'
+HUB='oxmix'
+
+function tests() {
+    go test ./...
+}
+
+case $1 in
+  push)
+    tests
+
+    docker buildx create --name $NAME-builder --use
+    docker buildx build --tag $HUB/$NAME:$VERSION --tag $HUB/$NAME:latest --push \
+                        --platform linux/amd64,linux/arm64 .
+    docker buildx rm $NAME-builder
+    docker buildx prune -f
+    ;;
+
+  local)
+    docker build -t $NAME-local .
+    docker rm -f $NAME
+    docker run -d --rm --name $NAME \
+      -h 127.0.0.1:8443:8443 \
+      $NAME-local
+    docker image prune -f
+    ;;
+
+  tests)
+    tests
+    ;;
+
+  *)
+    echo "./build local|push|tests"
+    ;;
+esac

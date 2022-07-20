@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png"
+          href="data:@file/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEJklEQVRYR+1Wf0yVVRh+zvcJCDi85XLL+EPFFcsmWovWVCLvQMmMocN+qHXn0qlbJreYy2xw/TlWkW0sK6fIH8AGUxKrYWRBpSytcISF251EWrPIwmuau9z7vT3fJ3dw8QJ31+v4x7N9O9933vOe5znP+573fAqj3NQo4+M2gYgVeLlFCgRIMgBP2aPqnUhDGTEB5zEh/vVWOltFvE7Ejhu/6SdQMmcUCGz+SgqYwkkQeLZl3KIQbGuWHuo8njJdEgUXwUotzRWcSlAUsG1+TNluSQ6UNPXLTNBiEijuI9D/zoGNmaFDYHOIbVwC8s93owK1yhuK5LA5UPql9BB0PMEvsXeZ+da3iJNjRQGb8/HQCqSskfepUg5BzqvLyHFXKs9gEkEEdjfKLGh4yppkoN7QkakJj5qCR/OjKVzb2izVOtncvY5Oz3+YShV26Fznx71q2bAE9hyVIopuyUxRiwPvg79Hsq2yK9fDDllAP+fJ/So7OV/iJyWiU/fB4Vf4y3sZ7lMfqZ7r6TSgVTRGh8ALWco1d7ksoXrPNFeqfBMiY7m8yW6eqS1Bp2kGPo3RsTqIQDVDwMpmhcAH1I8xkEnZk/wGPDEamsK1kUBr9rOSSv+GRAMptbXKP3Cj9jyZEBuLLo6lWQTyc+V+pWMxX/VIj9MgP0Wy9/Ho5hoG0uvqVHvAnpMjcQnxqGRyeg4eVCstAity5RwdqulwJRoEmDtcCr+wP7J0DcYdeBdXVRzWce2JfBYwBs3eWLxIZbwWgdULxffhJ4ht+BivM8G0aJBgdk0yBHYe1a117yGVjGZw14d6NRyrOKxOBzAsAhvmS3evD6l5G/ATHU2W0WpnT9Qg/c8/8LNP8EjZZ6pz8MIWgU12aREfnE+8ih2ULTNa6FRzccPbeNDQcM/OL9TKUOtaBLZmyC4C/55diLF9Fe/mOShUN5fA5dXx9bVezNreon4bksBbsyWLl8uWea/heZ6/DsbrZvPghPtbPHmuCUcY0t2vHFd7htqRpUANRL+YDjfL79NzNmE9h24omWFLovC5x41lbTXYy6TrXncytPRBSWh+lM8Uh6awduZzWBQ3FUfJ7IGwQTnRurIZzfZdqLryL6pYci90/YAVxVCsaUO3oEpYM0MOcMCbshDrbQ+hkO8Out41jL/5W3aK+VPV+zf2ny7DIpa87TznHyxtwxYFBnaEFkSgfLKMnRCPfSyHaazVO++woT65AFNEw3Rm9N0ESmRv7uiiX3A2xofWtjdgM8ZgCeesIvCvPgOFeR3q+5GAbwjBQIfGaTKfmr7ETJzL8TPcRwcvlgtMzqs8JTr7O8l8illcaDcIfJhPefYZ9V24wMMSCBiPJ0s8d5dGoHupykRWtgQq4Ce5fzin65qg3d6pzEsl4hbxX3HEiIMcbxMYdQX+B77so5/aJK1hAAAAAElFTkSuQmCC">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Container Ship</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            font-weight: 100;
+            margin: 30px;
+            color: #333;
+        }
+
+        a {
+            color: #333;
+        }
+
+        a:hover {
+            text-decoration: none;
+        }
+
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .colorfulness {
+            color: #bf87ff;
+            background-image: -webkit-linear-gradient(90deg, #f35626, #feab3a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            -webkit-animation: hue 30s infinite linear;
+        }
+
+        @-webkit-keyframes hue {
+            from {
+                -webkit-filter: hue-rotate(0deg);
+            }
+
+            to {
+                -webkit-filter: hue-rotate(-360deg);
+            }
+        }
+
+        .tabs-line {
+            height: 32px;
+            margin: 0 0 20px;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .tabs-line:after {
+            display: block;
+            content: '';
+            border-bottom: 1px solid #eee;
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .tabs-line ul {
+            display: block;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            white-space: nowrap;
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            -webkit-user-select: none;
+            user-select: none;
+            z-index: 1;
+            font-size: 0;
+            height: 32px;
+        }
+
+        .tabs-line li:last-child {
+            margin-right: 0;
+        }
+
+        .tabs-line li {
+            height: 32px;
+            margin-right: 10px;
+            box-sizing: border-box;
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            font-size: 1rem;
+        }
+
+        .tabs-line li > span,
+        .tabs-line li > a {
+            text-decoration: none;
+            display: inline-block;
+            padding: 6px 10px;
+        }
+
+        .tabs-line li.active:after,
+        .tabs-line li:hover:after {
+            display: block;
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-bottom: 1px solid #feab3a;
+        }
+
+        .tabs-line li:hover:after {
+            border-color: #fec475;
+        }
+
+        .connection {
+            display: inline-block;
+        }
+
+        .connection li {
+            list-style-type: '$ ';
+            margin: 8px 25px;
+        }
+
+        fieldset {
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            margin: 10px;
+        }
+
+        legend {
+            white-space: nowrap;
+            padding: 5px 10px;
+            color: #333;
+            position: relative;
+        }
+
+        legend:before {
+            position: absolute;
+            content: '';
+            height: 6px;
+            border-left: 1px solid #ddd;
+            left: 0;
+            top: 10px;
+        }
+
+        legend:after {
+            position: absolute;
+            content: '';
+            height: 6px;
+            border-right: 1px solid #ddd;
+            right: 0;
+            top: 10px;
+        }
+
+        legend > span {
+            color: grey;
+            margin-left: 10px;
+            font-size: .8rem;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 2px 5px;
+            position: relative;
+            top: -1px;
+        }
+
+        fieldset:hover,
+        fieldset:hover > legend:before,
+        fieldset:hover > legend:after {
+            border-color: #888;
+        }
+
+        .states .deployments ul,
+        .states .deployments fieldset,
+        .nodes .list,
+        .hub .list {
+            display: flex;
+        }
+
+        .hub .list {
+            justify-content: space-around;
+        }
+
+        .hub .total-size {
+            margin: 20px 0 0;
+            text-align: center;
+            color: grey;
+        }
+
+        .states .deployments fieldset,
+        .nodes .list,
+        .hub .list {
+            flex-wrap: wrap;
+        }
+
+        .hub fieldset {
+            min-width: 250px;
+        }
+
+        .hub fieldset legend {
+            cursor: pointer;
+        }
+
+        .hub fieldset legend:hover {
+            color: orangered;
+        }
+
+        .nodes .list > fieldset {
+            width: 300px;
+        }
+
+        .states .deployments > fieldset > fieldset {
+            min-width: 300px;
+        }
+
+        .nodes .list ul {
+            display: flex;
+            flex-flow: row;
+            flex-wrap: wrap;
+        }
+
+        .hub ul,
+        .states .deployments ul {
+            flex-flow: column;
+        }
+
+        .hub ul li,
+        .nodes .list li,
+        .states .deployments li {
+            margin: 0 5px 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 4px 8px;
+            font-size: .8rem;
+        }
+
+        .nodes .list li > span,
+        .hub li > span {
+            color: gray;
+        }
+
+        .nodes .list li.wrong,
+        .states .deployments li.wrong {
+            border-color: orangered;
+        }
+
+        .states .deployments li.running {
+            border-color: yellowgreen;
+        }
+    </style>
+</head>
+<body>
+<h1 style="text-align: center; font-weight: inherit;" class="colorfulness">Container ship</h1>
+
+<div class="tabs-line">
+    <ul>
+        <li class="tabs-link" data-tab="states">
+            <a href="#" onclick="return states();">States</a>
+        </li>
+        <li class="tabs-link" data-tab="nodes">
+            <a href="#" onclick="return nodes();">Nodes</a>
+        </li>
+        <li class="tabs-link" data-tab="hub" style="display: none;">
+            <a href="#" onclick="return hub();">Hub</a>
+        </li>
+        <li class="tabs-link">
+            <a href="https://github.com/oxmix/container-ship" target="_blank">Readme</a>
+        </li>
+    </ul>
+</div>
+
+<div class="content"></div>
+</body>
+<script>
+    function tabsSelect(name) {
+        content.innerHTML = '';
+        content.className = 'content ' + name;
+        document.querySelectorAll('.tabs-line .tabs-link').forEach((e) => {
+            e.className = 'tabs-link';
+        });
+        document.querySelector('.tabs-line .tabs-link[data-tab="' + name + '"]').className = 'tabs-link active';
+    }
+
+    function fieldset(title, content, name, onclick) {
+        const f = document.createElement('fieldset');
+        const l = document.createElement('legend');
+        l.innerHTML = title + (name ? '<span>' + name + '</span>' : '');
+        if (onclick) {
+            l.onclick = onclick;
+        }
+        f.append(l);
+        content.forEach((c) => {
+            f.append(c);
+        })
+        return f;
+    }
+
+    const content = document.querySelector('div.content');
+
+    function request(url, call, method) {
+        const xhr = new XMLHttpRequest();
+        xhr.open(method || 'GET', url, false);
+        xhr.send();
+        if (xhr.status !== 200) {
+            console.error(xhr.status + ': ' + xhr.statusText);
+        } else {
+            const res = JSON.parse(xhr.responseText);
+            if (!res.ok) {
+                console.error(res.message);
+                return
+            }
+            call(res);
+        }
+    }
+
+    function states() {
+        tabsSelect('states');
+
+        request('/states', (res) => {
+            Object.keys(res.data).forEach((space) => {
+
+                const spaces = [];
+                res.data[space].forEach((dm) => {
+                    const nodes = [];
+
+                    Object.keys(dm.nodes).forEach((node) => {
+
+                        const ul = document.createElement('ul');
+                        dm.nodes[node].forEach((n) => {
+                            const li = document.createElement('li');
+                            li.innerText = n.name + ': ' + (n.status.toLowerCase() || n.state.toLowerCase());
+                            li.className = n.state;
+                            ul.append(li)
+                        })
+
+                        nodes.push(
+                            fieldset(node, [ul], 'node')
+                        );
+                    });
+
+                    spaces.push(
+                        fieldset(dm.name, nodes, 'manifest')
+                    );
+                });
+                const f = fieldset(space, spaces, 'namespace');
+                f.className = 'deployments';
+                content.append(f);
+
+            });
+        });
+
+        return false;
+    }
+
+    states();
+
+    function nodes() {
+        tabsSelect('nodes');
+
+        content.innerHTML = `
+        <fieldset class="connection">
+            <legend>connection new node</legend>
+            <ul>
+                <li>
+                    curl -s` + (document.location.port === '8443' ? 'k' : '')
+            + ` ` + document.URL + `connection | sudo bash -
+                </li>
+            </ul>
+        </fieldset>
+        <div class="list"></div>`;
+
+        request('/nodes/stats', (res) => {
+            if (res.data.length === 0) {
+                return;
+            }
+            res.data.forEach((node) => {
+                const ul = document.createElement('ul');
+
+                ['ip', 'update', 'uptime', 'workersContainers', 'inQueue'].forEach((cell) => {
+                    const l = document.createElement('li');
+                    if (cell === 'update') {
+                        const sec = ((new Date()).getTime() / 1000 - node[cell]);
+                        if (sec > 20) {
+                            l.className = 'wrong';
+                        }
+                        l.innerHTML = '<span>'+cell + ':</span> ' + sec.toFixed(0) + ' sec. ago';
+                    } else if (cell === 'uptime') {
+                        const s = node[cell].split(',  load average');
+                        l.innerHTML = '<span>'+cell + ':</span> ' + s[0];
+
+                        const ll = document.createElement('li');
+                        ll.innerHTML = '<span>loadAverage:</span> ' + s[1].substring(2)
+                        ul.append(ll);
+                    } else {
+                        l.innerHTML = '<span>'+cell + ':</span> ' + node[cell];
+                    }
+                    ul.append(l);
+                });
+                document.querySelector('.content.nodes > .list').append(fieldset(node.name, [ul]));
+            });
+        })
+
+        return false;
+    }
+
+    function hub() {
+        tabsSelect('hub');
+
+        content.innerHTML = `<div class="list"></div><div class="total-size"></div>`
+
+        let totalSize = 0;
+        const push = (repo, manifests) => {
+            const ul = document.createElement('ul');
+            const rgs = [];
+            manifests.forEach((m) => {
+                const li = document.createElement('li');
+                rgs.push(requestGetSize(repo, m.digest, (size) => {
+                    totalSize += size;
+                    document.querySelector('.hub .total-size').innerText =
+                        'Total compressed size: ' + (totalSize / 1024 / 1024).toFixed(2) + ' MB'
+                    li.innerHTML = m.platform.os + '/' + m.platform.architecture
+                        + ' <span>' + (size / 1024 / 1024).toFixed(2) + ' MB</span>'
+                }));
+                ul.append(li)
+            });
+            Promise.all(rgs).then((arr) => {
+                let hide = true;
+                arr.forEach((e) => {
+                    if (e !== false) {
+                        hide = false;
+                    }
+                });
+                if (hide) {
+                    ul.parentNode.style.display = 'none';
+                }
+            });
+
+            const f = fieldset(repo, [ul], 'latest', () => {
+                if (!confirm('Remove latest tag?'))
+                    return false;
+
+                requestHubRemove(repo, 'latest');
+            });
+
+            document.querySelector('.content.hub > .list').append(f);
+        };
+
+        requestHub('/v2/_catalog', {}, (catalog) => {
+            catalog.repositories.forEach((repo) => {
+                requestHub('/v2/' + repo + '/manifests/latest', {
+                    headers: {'Accept': 'application/vnd.docker.distribution.manifest.list.v2+json'}
+                }, (m) => push(repo, m.manifests));
+            });
+        });
+
+        return false;
+    }
+
+    requestHub('/v2/_catalog', {}, (catalog) => {
+        if (catalog && catalog.repositories && catalog.repositories.length > 0) {
+            document.querySelector('.tabs-link[data-tab=hub]').style.display = 'inline-block';
+        }
+    });
+
+    function requestHub(url, params, call) {
+        try {
+            return fetch(url, params)
+                .then(response => response.text())
+                .then(text => {
+                    try {
+                        const j = JSON.parse(text);
+                        call(j)
+                        return j;
+                    } catch (err) {
+                        return false;
+                    }
+                });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function requestGetSize(repo, digest, call) {
+        return requestHub('/v2/' + repo + '/manifests/' + digest, {
+            headers: {'Accept': 'application/vnd.docker.distribution.manifest.list.v2+json'}
+        }, (d) => {
+            if (d.errors) {
+                console.error(d.errors);
+            }
+            let size = 0;
+            d.layers.map((e) => size += e.size)
+            call(size);
+        });
+    }
+
+    function requestHubRemove(repo, tag) {
+        requestHub('/v2/' + repo + '/manifests/' + tag, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/vnd.docker.distribution.manifest.v2+json'
+                    + ', application/vnd.oci.image.manifest.v1+json'
+                    + ', application/vnd.docker.distribution.manifest.list.v2+json'
+                    + ', application/vnd.oci.image.index.v1+json'
+            }
+        }, (m) => {
+            if (m.errors) {
+                console.error(m.errors);
+                return;
+            }
+            const queue = [];
+            m.manifests.forEach((mm) => {
+                queue.push(requestHub('/v2/' + repo + '/manifests/' + mm.digest, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/vnd.docker.distribution.manifest.v2+json'
+                            + ', application/vnd.oci.image.manifest.v1+json'
+                    }
+                }, (d) => {
+                    console.info("delete manifest: ", d);
+                }));
+            });
+
+            Promise.all(queue).then(() => {
+                hub();
+            });
+        })
+    }
+</script>
+</html>

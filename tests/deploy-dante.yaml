@@ -1,0 +1,14 @@
+space: tests
+name: dante-deployment
+nodes:
+  - localhost
+containers:
+  - name: dante
+    from: vimagick/dante
+    restart: unless-stopped
+    log-opt: max-size=5m
+    ports:
+      - 9180:1080
+    executions:
+      - bash -c "useradd user1 && echo user1:user132167 | chpasswd"
+      - bash -c "useradd user2 && echo user2:user232167 | chpasswd"

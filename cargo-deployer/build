@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+NAME='cargo-deployer'
+VERSION='1'
+HUB='oxmix'
+
+case $1 in
+  push)
+    docker buildx create --name $NAME-builder --use
+    docker buildx build --tag $HUB/$NAME:$VERSION --tag $HUB/$NAME:latest --push \
+                        --platform linux/amd64,linux/arm64 .
+    docker buildx rm $NAME-builder
+    docker buildx prune -f
+    ;;
+
+  local)
+    docker build -t $NAME-local .
+    docker rm -f ctr-ship.$NAME
+    docker run -d --rm --name ctr-ship.$NAME \
+      --label ctr-ship.deployment=ctr-ship.$NAME-deployment \
+      -v /var/run/docker.sock:/var/run/docker.sock:rw \
+      $NAME-local
+    docker image prune -f
+    ;;
+
+  *)
+    echo "./build local|push"
+    ;;
+esac

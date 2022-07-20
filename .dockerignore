@@ -1,0 +1,8 @@
+.dockerignore
+**/.DS_Store
+.idea
+.git
+.gitignore
+Dockerfile
+build
+cargo-deployer
