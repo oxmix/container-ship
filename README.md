@@ -1,6 +1,6 @@
 # Container Ship
 [![Go Report Card](https://goreportcard.com/badge/github.com/oxmix/container-ship)](https://goreportcard.com/report/github.com/oxmix/container-ship)
-[![CI Status](https://github.com/oxmix/container-ship/workflows/Build%20and%20publish/badge.svg)](https://github.com/oxmix/container-ship/actions/workflows/hub-docker.yaml)
+[![CI Status](https://github.com/oxmix/container-ship/workflows/test%20build%20publish/badge.svg)](https://github.com/oxmix/container-ship/actions/workflows/hub-docker.yaml)
 [![Docker Pulls Ship](https://img.shields.io/docker/pulls/oxmix/container-ship.svg?logo=docker)](https://hub.docker.com/r/oxmix/container-ship)
 [![Docker Pulls Cargo](https://img.shields.io/docker/pulls/oxmix/cargo-deployer.svg?logo=docker)](https://hub.docker.com/r/oxmix/cargo-deployer)
 

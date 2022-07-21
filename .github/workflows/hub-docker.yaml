@@ -1,4 +1,4 @@
-name: Build and publish
+name: test build publish
 
 on:
   push:
@@ -6,10 +6,20 @@ on:
   pull_request:
 
 jobs:
+  test:
+    name: Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18.x
+      - uses: actions/checkout@v3
+      - run: go test ./...
+
   build:
     name: Build containers
+    needs: test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,20 +30,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Building container-ship images and push to hub
+      - name: Preparing buildx
         run: |
-          set -e
-          ./build tests
           docker run --privileged --rm tonistiigi/binfmt --install arm64
           docker buildx create --use
+
+      - name: Building container-ship images and push to hub
+        run: |
           docker buildx build --tag oxmix/container-ship:1 \
                               --tag oxmix/container-ship:latest \
                               --push --platform linux/amd64,linux/arm64 .
 
       - name: Building cargo-deployer images and push to hub
         run: |
-          docker run --privileged --rm tonistiigi/binfmt --install arm64
-          docker buildx create --use
           docker buildx build --tag oxmix/cargo-deployer:1 \
                               --tag oxmix/cargo-deployer:latest \
                               --push --platform linux/amd64,linux/arm64 cargo-deployer
