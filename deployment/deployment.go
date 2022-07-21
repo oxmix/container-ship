@@ -16,17 +16,17 @@ const CargoDeploymentName = "cargo-deployer-deployment"
 
 var Single *Deployment
 
-func NewDeployment(dirManifests string) (*Deployment, error) {
+func NewDeployment(dirManifests string) error {
 	Single = new(Deployment)
 	Single.dirManifests = dirManifests
 
 	err := Single.LoadingManifests()
 
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
-	return Single, nil
+	return nil
 }
 
 type Deployment struct {
@@ -39,7 +39,8 @@ func (d *Deployment) loadCargoDeployer() {
 	var envs []string
 	if u.Env().Environment == "container" {
 		envs = []string{
-			fmt.Sprintf("ENDPOINT=https://%s", u.Env().Endpoint),
+			"NAMESPACE=" + u.Env().Namespace,
+			"ENDPOINT=https://" + u.Env().Endpoint,
 		}
 	}
 
@@ -65,9 +66,9 @@ func (d *Deployment) loadCargoDeployer() {
 }
 
 func (d *Deployment) CargoShell() []byte {
-	envs := ""
+	envs := "-e NAMESPACE=" + u.Env().Namespace
 	if u.Env().Environment == "container" {
-		envs = fmt.Sprintf("-e ENDPOINT=https://%s", u.Env().Endpoint)
+		envs += " -e ENDPOINT=https://" + u.Env().Endpoint
 	}
 
 	return []byte(`
@@ -162,13 +163,14 @@ func (d *Deployment) SaveManifest(dm *Manifest) error {
 	return nil
 }
 
-func (d *Deployment) DeleteManifest(key string) error {
+func (d *Deployment) DeleteManifest(key string) (*Manifest, error) {
 	if dml, ok := d.Manifests.LoadAndDelete(key); ok {
 		dm := dml.(*Manifest)
 		err := os.Remove(d.dirManifests + "/" + dm.GetDeploymentName() + ".yaml")
 		if err != nil {
-			return err
+			return nil, err
 		}
+		return dm, nil
 	}
-	return nil
+	return nil, fmt.Errorf("not found manifest")
 }

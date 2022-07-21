@@ -1,0 +1,5 @@
+IPv4: 127.0.0.1
+name: localhost
+variables:
+  - key: TEXT_KEY
+    val: key-32167

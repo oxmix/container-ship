@@ -12,8 +12,16 @@ pcntl_signal(SIGTERM, function () {
 	exit(0);
 });
 
-function endpoint() {
+function endpoint(): string {
 	return $_SERVER['ENDPOINT'] ?? 'https://host.docker.internal:8443';
+}
+
+function namespaceShip(): string {
+	return $_SERVER['NAMESPACE'] ?? 'ctr-ship';
+}
+
+function namespaceDeployment($name = ''): string {
+	return namespaceShip().'.deployment'.(!empty($name) ? '='.$name : '');
 }
 
 function push($iteration) {
@@ -58,7 +66,7 @@ function push($iteration) {
 function containers(): array {
 	$curl = curl_init('http://localhost/v1.40/containers/json?filters='.json_encode([
 			'label' => [
-				'ctr-ship.deployment'
+				namespaceDeployment()
 			]
 		]));
 	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
@@ -131,7 +139,7 @@ function containerCommand($e, $deploymentName): string {
 
 	return 'docker run -d'
 		.' --name '.$e['name']
-		.' --label ctr-ship.deployment='.$deploymentName
+		.' --label '.namespaceDeployment($deploymentName)
 		.' '.$params.' '.$e['from'];
 }
 
@@ -165,6 +173,25 @@ function selfUpgrade($d) {
 	exit;
 }
 
+function destroy() {
+	$ids = explode(PHP_EOL,
+		trim(shell_exec('docker ps -a --filter "label='.namespaceDeployment().'" --format "{{.Names}}"'))
+	);
+	if (!empty($ids)) {
+		$spaceCargo = namespaceShip().'.cargo-deployer';
+		$ids = array_flip($ids);
+		unset($ids[$spaceCargo]);
+		$ids = implode(' ', array_flip($ids));
+
+		echo '• Containers destroy: ';
+		echo shell_exec('docker rm -f '.$ids.' 2>&1').PHP_EOL;
+
+		echo '• Self destroy: ';
+		echo shell_exec('docker rm -f '.$spaceCargo.' 2>&1').PHP_EOL;
+	}
+	exit;
+}
+
 function containersExecute($data) {
 	$data = json_decode($data, true);
 
@@ -179,6 +206,10 @@ function containersExecute($data) {
 			selfUpgrade($d);
 		}
 
+		if (($d['destroy'] ?? false) === true) {
+			destroy();
+		}
+
 		echo '••••••••••'.PHP_EOL;
 		echo '• Execution deployment: '.$d['deployment-name'].PHP_EOL;
 
@@ -191,7 +222,7 @@ function containersExecute($data) {
 		}
 
 		$ids = str_replace(PHP_EOL, ' ',
-			shell_exec('docker ps -aqf "label=ctr-ship.deployment='.$d['deployment-name'].'"')
+			shell_exec('docker ps -aqf "label='.namespaceDeployment($d['deployment-name']).'"')
 		);
 		if (!empty($ids)) {
 			echo '• Containers stop: ';
@@ -227,7 +258,7 @@ function containersExecute($data) {
 while (true) {
 	$result = push(++$iteration);
 
-	if ($result['ok']) {
+	if (($result['ok'] ?? false) === true) {
 		if (!empty($result['data']['execs'])) {
 			echo '['.date('Y-m-d H:i:s').'] Received data for deployments'.PHP_EOL;
 			containersExecute($result['data']['execs']);

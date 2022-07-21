@@ -1,33 +1,37 @@
 package pool
 
 import (
+	"ctr-ship/deployment"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/fs"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
 
 type Node struct {
-	ModTime   time.Time
-	IPv4      string `yaml:"IPv4"`
-	IPv6      string `yaml:"IPv6"`
-	Name      string `yaml:"node"`
+	IPv4      string `yaml:"IPv4,omitempty"`
+	IPv6      string `yaml:"IPv6,omitempty"`
+	Name      string `yaml:"name"`
 	Variables []struct {
 		Key string `yaml:"key"`
 		Val string `yaml:"val"`
 	}
 }
 
-type NodeStats struct {
-	IP                string `json:"ip"`
-	Name              string `json:"name"`
-	Update            int64  `json:"update"`
-	Uptime            string `json:"uptime"`
-	WorkersContainers int    `json:"workersContainers"`
-	InQueue           int    `json:"inQueue"`
+func (n Node) getIP() string {
+	if n.IPv4 != "" {
+		return n.IPv4
+	}
+
+	if n.IPv6 != "" {
+		return n.IPv6
+	}
+
+	return ""
 }
 
 func NewNode(f fs.FileInfo, DirNodes string) (*Node, error) {
@@ -36,9 +40,7 @@ func NewNode(f fs.FileInfo, DirNodes string) (*Node, error) {
 		return nil, err
 	}
 
-	n := &Node{
-		ModTime: f.ModTime(),
-	}
+	n := new(Node)
 
 	err = yaml.Unmarshal(buf, n)
 	if err != nil {
@@ -48,52 +50,69 @@ func NewNode(f fs.FileInfo, DirNodes string) (*Node, error) {
 	return n, nil
 }
 
-func (p *NodesPool) handlerConf(DirNodes string) {
-	go func() {
-		var (
-			files []fs.FileInfo
-			nc    *Node
-			err   error
-		)
+func (p *NodesPool) AddNode(n *Node) error {
+	yamlData, err := yaml.Marshal(n)
+	if err != nil {
+		return err
+	}
 
-		for {
-			files, err = ioutil.ReadDir(DirNodes)
+	err = ioutil.WriteFile(p.dirNodes+"/"+n.Name+".yaml", yamlData, 0644)
+	if err != nil {
+		return err
+	}
 
-			if err != nil {
-				log.Fatal("fatal read dir nodes")
-			}
+	p.list.Store(n.Name, n)
 
-			for _, f := range files {
-				if !strings.HasSuffix(f.Name(), ".yaml") {
-					continue
-				}
-
-				nc, err = NewNode(f, DirNodes)
-				if err != nil {
-					fmt.Println("failed read conf node:", f.Name(), "err:", err)
-					continue
-				}
-
-				hostname := strings.TrimSuffix(f.Name(), ".yaml")
-
-				p.AddNode(hostname, nc)
-			}
-
-			time.Sleep(5 * time.Second)
-		}
-	}()
+	return nil
 }
 
-func (p *NodesPool) AddNode(hostname string, node *Node) {
-	if ecf, ok := p.list.Load(hostname); !ok {
-		p.list.Store(hostname, node)
-		log.Printf("added node %q", hostname)
-	} else {
-		if node.ModTime.Unix() > ecf.(*Node).ModTime.Unix() {
-			p.list.Store(hostname, node)
-			log.Printf("refreshed node %q", hostname)
+func (p *NodesPool) DeleteNode(key string) error {
+	if n, ok := p.list.LoadAndDelete(key); ok {
+		nn := n.(*Node)
+
+		log.Printf("node %q destroy with all containers", nn.Name)
+
+		p.queueMu.Lock()
+		p.queue[nn.getIP()] = append(p.queue[nn.getIP()], deployment.Request{
+			Destroy: true,
+		})
+		p.queueMu.Unlock()
+
+		err := os.Remove(p.dirNodes + "/" + nn.Name + ".yaml")
+		if err != nil {
+			return err
 		}
+
+		go func(nodeName string) {
+			time.Sleep(10 * time.Second)
+			p.running.Delete(nodeName)
+		}(nn.Name)
+	} else {
+		return fmt.Errorf("not found node")
 	}
+	return nil
+}
+
+func (p *NodesPool) loadingNodes() error {
+	log.Println("loading nodes")
+
+	files, err := ioutil.ReadDir(p.dirNodes)
+
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".yaml") {
+			continue
+		}
+
+		node, err := NewNode(f, p.dirNodes)
+		if err != nil {
+			fmt.Println("failed read conf node:", f.Name(), "err:", err)
+			continue
+		}
+
+		p.list.Store(node.Name, node)
+	}
+
+	return err
 }
 
 func (p *NodesPool) ExistIp(ip string) (exist bool) {

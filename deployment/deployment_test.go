@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewDeployment(t *testing.T) {
-	_, err := NewDeployment(t.TempDir())
+	err := NewDeployment(t.TempDir())
 	if err != nil {
 		t.Error(err)
 	}
@@ -26,18 +26,14 @@ func TestSaveAndDeleteManifest(t *testing.T) {
 		Nodes: []string{"example.ctr-ship.host"},
 	}
 
-	_, err := NewDeployment(t.TempDir())
+	err := NewDeployment(t.TempDir())
 	err = Single.SaveManifest(mf)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = Single.DeleteManifest(mf.GetDeploymentName())
+	_, err = Single.DeleteManifest(mf.GetDeploymentName())
 	if err != nil {
 		t.Error(err)
 	}
-}
-
-func Test(t *testing.T) {
-
 }

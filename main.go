@@ -25,7 +25,7 @@ func main() {
 
 	u.SignalHandler()
 
-	_, err := deployment.NewDeployment(DirManifests)
+	err := deployment.NewDeployment(DirManifests)
 	if err != nil {
 		log.Fatal("failed new deployment, err:", err)
 		return

@@ -10,14 +10,15 @@ import (
 var pool Nodes
 
 func TestAddNode(t *testing.T) {
-	_, err := deployment.NewDeployment(t.TempDir())
+	err := deployment.NewDeployment(t.TempDir())
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	pool = NewPoolNodes(t.TempDir())
 
-	pool.AddNode("local", &Node{
+	err = pool.AddNode(&Node{
 		Name: "localhost",
 		IPv4: "127.0.0.1",
 		Variables: []struct {
@@ -27,6 +28,9 @@ func TestAddNode(t *testing.T) {
 			{Key: "MAGICAL_ENV", Val: "--secret--"},
 		},
 	})
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestExistIp(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"ctr-ship/deployment"
 	"ctr-ship/pool"
 	"ctr-ship/web"
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
@@ -14,6 +15,32 @@ import (
 func Deployment(pool pool.Nodes) {
 	http.HandleFunc("/deployment", func(w http.ResponseWriter, r *http.Request) {
 		if !web.CheckRequest(w, r, pool) {
+			return
+		}
+
+		if r.Method == "DELETE" {
+			name := r.URL.Query().Get("name")
+			if name != "" {
+				dm, err := deployment.Single.DeleteManifest(name)
+				if err != nil {
+					web.Failed(w, 400, err.Error())
+					return
+				}
+
+				dm.Containers = []deployment.Container{}
+
+				err = pool.AddQueue(dm, "")
+				if err != nil {
+					msg := fmt.Errorf("failed add queue, err: %q", err)
+					log.Println(msg)
+					web.Failed(w, 400, msg.Error())
+					return
+				}
+
+				web.Success(w, struct{}{})
+				return
+			}
+			web.Failed(w, 400, "name is empty")
 			return
 		}
 
