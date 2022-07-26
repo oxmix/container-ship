@@ -67,7 +67,7 @@ func (p *NodesPool) AddNode(n *Node) error {
 }
 
 func (p *NodesPool) DeleteNode(key string) error {
-	if n, ok := p.list.LoadAndDelete(key); ok {
+	if n, ok := p.list.Load(key); ok {
 		nn := n.(*Node)
 
 		log.Printf("node %q destroy with all containers", nn.Name)
@@ -84,7 +84,8 @@ func (p *NodesPool) DeleteNode(key string) error {
 		}
 
 		go func(nodeName string) {
-			time.Sleep(10 * time.Second)
+			time.Sleep(20 * time.Second)
+			p.list.Delete(nodeName)
 			p.running.Delete(nodeName)
 		}(nn.Name)
 	} else {

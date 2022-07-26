@@ -2,10 +2,14 @@ package deployment
 
 import (
 	"encoding/hex"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"math/rand"
+	"time"
 )
 
 type Manifest struct {
+	LastModify int64    `yaml:"last-modify"`
 	Space      string   `yaml:"space"`
 	Name       string   `yaml:"name"`
 	Nodes      []string `yaml:"nodes"`
@@ -31,11 +35,31 @@ type Container struct {
 	Executions   []string `yaml:"executions,omitempty" json:"executions"`
 }
 
-func (dm Manifest) ExistNode(name string) bool {
-	if len(dm.Nodes) > 0 && dm.Nodes[0] == "*" {
+func NewManifest() Manifest {
+	return Manifest{
+		LastModify: time.Now().Unix(),
+	}
+}
+
+func (m Manifest) Save(dirManifests string) error {
+	yamlData, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dirManifests+"/"+m.GetDeploymentName()+".yaml", yamlData, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m Manifest) ExistNode(name string) bool {
+	if len(m.Nodes) > 0 && m.Nodes[0] == "*" {
 		return true
 	}
-	for _, n := range dm.Nodes {
+	for _, n := range m.Nodes {
 		if n == name {
 			return true
 		}
@@ -43,16 +67,16 @@ func (dm Manifest) ExistNode(name string) bool {
 	return false
 }
 
-func (dm Manifest) GetDeploymentName() string {
-	return dm.Space + "." + dm.Name
+func (m Manifest) GetDeploymentName() string {
+	return m.Space + "." + m.Name
 }
 
-func (dm Manifest) GetContainerName(name string) string {
-	return dm.Space + "." + name
+func (m Manifest) GetContainerName(name string) string {
+	return m.Space + "." + name
 }
 
-func (dm Manifest) GetContainerNameRand(name string) string {
+func (m Manifest) GetContainerNameRand(name string) string {
 	token := make([]byte, 3)
 	rand.Read(token)
-	return dm.Space + "." + name + "-" + hex.EncodeToString(token)
+	return m.Space + "." + name + "-" + hex.EncodeToString(token)
 }

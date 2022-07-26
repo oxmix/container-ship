@@ -51,20 +51,20 @@ func TestUpgradeCargo(t *testing.T) {
 }
 
 func TestAddQueueCaseDestroy(t *testing.T) {
-	manifest := &deployment.Manifest{
+	manifest := deployment.Manifest{
 		Space: u.Env().Namespace,
 		Name:  "test-deployment-destroy",
 		Nodes: []string{"*"},
 	}
 
-	err := pool.AddQueue(manifest, "localhost")
+	err := pool.AddQueue(manifest)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestAddQueueCaseRun(t *testing.T) {
-	manifest := &deployment.Manifest{
+	manifest := deployment.Manifest{
 		Space: u.Env().Namespace,
 		Name:  "test-deployment-run",
 		Nodes: []string{"*"},
@@ -79,7 +79,7 @@ func TestAddQueueCaseRun(t *testing.T) {
 		},
 	}
 
-	err := pool.AddQueue(manifest, "localhost")
+	err := pool.AddQueue(manifest)
 	if err != nil {
 		t.Error(err)
 	}

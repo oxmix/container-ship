@@ -14,13 +14,13 @@ import (
 
 func NewPoolNodes(dirNodes string) *NodesPool {
 	np := &NodesPool{
-		dirNodes: dirNodes,
-		list:     &sync.Map{},
-		queue:    map[string][]deployment.Request{},
-		queueMu:  sync.Mutex{},
-		delays:   &sync.Map{},
-		pool:     make(chan Running),
-		running:  &sync.Map{},
+		dirNodes:    dirNodes,
+		list:        &sync.Map{},
+		queue:       map[string][]deployment.Request{},
+		queueMu:     sync.Mutex{},
+		aliveDelays: &sync.Map{},
+		pool:        make(chan Running),
+		running:     &sync.Map{},
 	}
 
 	err := np.loadingNodes()
@@ -33,25 +33,26 @@ func NewPoolNodes(dirNodes string) *NodesPool {
 }
 
 type NodesPool struct {
-	dirNodes string
-	list     *sync.Map
-	queue    map[string][]deployment.Request
-	queueMu  sync.Mutex
-	delays   *sync.Map
-	pool     chan Running
-	running  *sync.Map
+	dirNodes    string
+	list        *sync.Map
+	queue       map[string][]deployment.Request
+	queueMu     sync.Mutex
+	aliveDelays *sync.Map
+	pool        chan Running
+	running     *sync.Map
 }
 
 type Nodes interface {
 	AddNode(n *Node) error
 	DeleteNode(key string) error
 	ExistIp(ip string) (exist bool)
-	AddQueue(manifest *deployment.Manifest, onlyNode string) error
+	AddQueue(manifest deployment.Manifest) error
 	GetQueue(ip string) []byte
 	Working(f func(nr Running))
 	UpgradeCargo() error
 	Receiver(ip string, body []byte) error
 	NodesStats() (ns []NodeStats)
+	GetNodes() (r []string)
 }
 
 func (p *NodesPool) NodesStats() (ns []NodeStats) {
@@ -103,22 +104,45 @@ func (p *NodesPool) handlerAlive() {
 			p.running.Store(pp.NodeName, pp)
 
 			deployment.Single.Manifests.Range(func(key, val any) bool {
-				dm := val.(*deployment.Manifest)
+				dm := val.(deployment.Manifest)
+
 				if !dm.ExistNode(pp.NodeName) {
+					return true
+				}
+
+				if time.Now().Unix()-dm.LastModify < 30 {
 					return true
 				}
 
 				// check and to start
 				for _, c := range dm.Containers {
 					name := dm.GetContainerName(c.Name)
-					if !pp.existContainer(name) {
-						log.Printf("trigger alive, lost container: %q, node: %q", name, pp.NodeName)
-						err := p.AddQueue(dm, pp.NodeName)
-						if err != nil {
-							log.Println("failed add queue, err:", err)
-						}
-						return false
+					if pp.existContainer(name) {
+						continue
 					}
+
+					delayKey := pp.NodeName + "-" + name
+					if dls, ok := p.aliveDelays.Load(delayKey); ok {
+						t := dls.(time.Time)
+						if time.Now().Sub(t).Seconds() < 60 {
+							log.Printf(
+								"trigger alive, waiting, container: %q, node: %q, delay: 60 sec, past: %f",
+								name, pp.NodeName, time.Now().Sub(t).Seconds())
+							return true
+						}
+					}
+					p.aliveDelays.Store(delayKey, time.Now())
+
+					// set node
+					dm.Nodes = []string{pp.NodeName}
+
+					log.Printf("trigger alive, lost container: %q, node: %q", name, pp.NodeName)
+					err := p.AddQueue(dm)
+					if err != nil {
+						log.Println("failed add queue, err:", err)
+					}
+					return false
+
 				}
 				return true
 			})
@@ -145,18 +169,7 @@ func (p *NodesPool) GetQueue(ip string) []byte {
 	return marshal
 }
 
-func (p *NodesPool) AddQueue(dm *deployment.Manifest, onlyNode string) error {
-
-	if dls, ok := p.delays.Load(dm.GetDeploymentName()); ok {
-		t := dls.(time.Time)
-		if time.Now().Sub(t).Seconds() < 30 {
-			log.Printf("deployment %q no added to queue, delay: 30 sec, past: %f",
-				dm.GetDeploymentName(), time.Now().Sub(t).Seconds())
-			return nil
-		}
-	}
-	p.delays.Store(dm.GetDeploymentName(), time.Now())
-
+func (p *NodesPool) AddQueue(dm deployment.Manifest) error {
 	if len(dm.Nodes) == 0 {
 		return fmt.Errorf("not found nodes in manifest")
 	}
@@ -189,15 +202,6 @@ func (p *NodesPool) AddQueue(dm *deployment.Manifest, onlyNode string) error {
 		p.list.Range(func(key, val any) bool {
 			nc := val.(*Node)
 
-			// if update selected node
-			if onlyNode != "" {
-				if onlyNode == nc.Name {
-					add(nc)
-					return false
-				}
-				return true
-			}
-
 			if node == "*" {
 				add(nc)
 				return true
@@ -222,7 +226,7 @@ func (p *NodesPool) AddQueue(dm *deployment.Manifest, onlyNode string) error {
 
 func (p *NodesPool) UpgradeCargo() error {
 	if dm, ok := deployment.Single.Manifests.Load(u.Env().Namespace + "." + deployment.CargoDeploymentName); ok {
-		err := p.AddQueue(dm.(*deployment.Manifest), "")
+		err := p.AddQueue(dm.(deployment.Manifest))
 		if err != nil {
 			return err
 		}
@@ -231,6 +235,16 @@ func (p *NodesPool) UpgradeCargo() error {
 	}
 
 	return nil
+}
+
+func (p *NodesPool) GetNodes() (r []string) {
+	p.list.Range(func(key, val any) bool {
+		n := val.(*Node)
+		r = append(r, n.Name)
+		return true
+	})
+
+	return r
 }
 
 func (p *NodesPool) magicEnvs(dcs []deployment.Container, nc *Node) (ndc []deployment.Container) {

@@ -29,7 +29,7 @@ func States(nodes pool.Nodes) {
 
 		out := map[string][]states{}
 		deployment.Single.Manifests.Range(func(_, val any) bool {
-			dm := val.(*deployment.Manifest)
+			dm := val.(deployment.Manifest)
 
 			nodesOut := map[string][]statesContainers{}
 			for _, c := range dm.Containers {

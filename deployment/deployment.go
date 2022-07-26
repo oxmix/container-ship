@@ -44,7 +44,7 @@ func (d *Deployment) loadCargoDeployer() {
 		}
 	}
 
-	dc := &Manifest{
+	dc := Manifest{
 		Space: u.Env().Namespace,
 		Name:  CargoDeploymentName,
 		Nodes: []string{"*"},
@@ -132,45 +132,67 @@ func (d *Deployment) LoadingManifests() error {
 	return err
 }
 
-func (d *Deployment) read(f fs.FileInfo) (*Manifest, error) {
+func (d *Deployment) read(f fs.FileInfo) (Manifest, error) {
 	buf, err := ioutil.ReadFile(d.dirManifests + "/" + f.Name())
 	if err != nil {
-		return nil, err
+		return Manifest{}, err
 	}
 
 	dc := &Manifest{}
 	err = yaml.Unmarshal(buf, dc)
 	if err != nil {
-		return nil, fmt.Errorf("in file %q: %v", f.Name(), err)
+		return *dc, fmt.Errorf("in file %q: %v", f.Name(), err)
 	}
 
-	return dc, nil
+	return *dc, nil
 }
 
-func (d *Deployment) SaveManifest(dm *Manifest) error {
-	yamlData, err := yaml.Marshal(dm)
+func (d *Deployment) SaveManifest(m Manifest) error {
+	err := m.Save(d.dirManifests)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(d.dirManifests+"/"+dm.GetDeploymentName()+".yaml", yamlData, 0644)
-	if err != nil {
-		return err
-	}
-
-	d.Manifests.Store(dm.GetDeploymentName(), dm)
+	d.Manifests.Store(m.GetDeploymentName(), m)
 
 	return nil
 }
 
-func (d *Deployment) DeleteManifest(key string) (*Manifest, error) {
+func (d *Deployment) DeleteManifest(key string) (Manifest, error) {
 	if dml, ok := d.Manifests.LoadAndDelete(key); ok {
-		dm := dml.(*Manifest)
+		dm := dml.(Manifest)
 		err := os.Remove(d.dirManifests + "/" + dm.GetDeploymentName() + ".yaml")
 		if err != nil {
-			return nil, err
+			return dm, err
 		}
 		return dm, nil
 	}
-	return nil, fmt.Errorf("not found manifest")
+	return Manifest{}, fmt.Errorf("not found manifest")
+}
+
+func (d *Deployment) DiffNodes(mn Manifest) [][]string {
+	r := make([][]string, 2)
+	if ml, ok := d.Manifests.Load(mn.GetDeploymentName()); ok {
+		m := ml.(Manifest)
+
+		r[0] = d.diff(m.Nodes, mn.Nodes)
+		r[1] = d.diff(mn.Nodes, m.Nodes)
+	}
+
+	return r
+}
+
+func (d *Deployment) diff(a, b []string) (diff []string) {
+	mb := make(map[string]struct{}, len(a))
+	for _, x := range a {
+		mb[x] = struct{}{}
+	}
+
+	for _, x := range b {
+		if _, found := mb[x]; !found {
+			diff = append(diff, x)
+		}
+	}
+
+	return diff
 }

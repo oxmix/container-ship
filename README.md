@@ -124,6 +124,34 @@ curl -kX DELETE https://ctr-ship.example.host/nodes/apply?name=localhost
 curl -kX DELETE https://ctr-ship.example.host/deployment?name=my-project.test-deployment
 ```
 
+### Magic environments
+* update node
+```shell
+curl -kX POST https://127.0.0.1:8443/nodes/apply --data-binary @- << 'EOF'
+IPv4: 127.0.0.1
+name: localhost
+variables:
+  - key: PASS_SEC
+    val: 32167
+EOF
+```
+* auto replace in each manifest deployment if set equal node and variables {}
+```shell
+curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << 'EOF'
+space: example
+name: magick-envs-deployment
+nodes:
+  - localhost
+containers:
+  - name: nginx
+    from: nginx
+    ports:
+      - 8080:80
+    environments:
+      - PASS={PASS_SEC}
+EOF
+```
+
 ### Tab `Nodes`
 * Shows stats by nodes
 
