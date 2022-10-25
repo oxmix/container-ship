@@ -146,10 +146,14 @@ containers:
   - name: nginx
     from: nginx
     ports:
-      - 8080:80
+      - 8081:80
     environments:
       - PASS={PASS_SEC}
 EOF
+```
+### Deployment through file
+```yaml
+curl -kX POST https://127.0.0.1:8443/deployment --data-binary "@test-deployment.yaml"
 ```
 
 ### Tab `Nodes`

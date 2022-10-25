@@ -201,8 +201,6 @@ function containersExecute($data) {
 		return;
 	}
 
-	var_dump($data);
-
 	foreach ($data as $d) {
 		if ($d['self-upgrade']) {
 			selfUpgrade($d);
