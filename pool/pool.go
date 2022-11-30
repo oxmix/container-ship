@@ -141,7 +141,7 @@ func (p *NodesPool) handlerAlive() {
 					if err != nil {
 						log.Println("failed add queue, err:", err)
 					}
-					return false
+					return true
 
 				}
 				return true
