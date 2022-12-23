@@ -22,7 +22,7 @@ oxmix/container-ship
 
 2. Connection new node
 * Add node to a ship
-```shell
+```yaml
 curl -kX POST https://127.0.0.1:8443/nodes/apply --data-binary @- << 'EOF'
 IPv4: 127.0.0.1
 name: localhost
@@ -34,7 +34,7 @@ curl -sk https://127.0.0.1:8443/connection | sudo bash -
 ```
 
 3. Apply deployment manifest
-```shell
+```yaml
 curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << 'EOF'
 space: my-project
 name: test-deployment
@@ -43,6 +43,7 @@ nodes:
 containers:
   - name: nginx
     from: nginx
+    stop-time: 30
     ports:
       - 8080:80
 EOF
@@ -114,19 +115,19 @@ server {
 
 ### Delete node
 * All containers will be destroyed and `cargo-deployer` too
-```
+```shell
 curl -kX DELETE https://ctr-ship.example.host/nodes/apply?name=localhost
 ```
 
 ### Delete manifest deployment
 * All containers will be destroyed
-```
+```shell
 curl -kX DELETE https://ctr-ship.example.host/deployment?name=my-project.test-deployment
 ```
 
 ### Magic environments
 * update node
-```shell
+```yaml
 curl -kX POST https://127.0.0.1:8443/nodes/apply --data-binary @- << 'EOF'
 IPv4: 127.0.0.1
 name: localhost
@@ -136,7 +137,7 @@ variables:
 EOF
 ```
 * auto replace in each manifest deployment if set equal node and variables {}
-```shell
+```yaml
 curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << 'EOF'
 space: example
 name: magick-envs-deployment
@@ -152,7 +153,7 @@ containers:
 EOF
 ```
 ### Deployment through file
-```yaml
+```shell
 curl -kX POST https://127.0.0.1:8443/deployment --data-binary "@test-deployment.yaml"
 ```
 

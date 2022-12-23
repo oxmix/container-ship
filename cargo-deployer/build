@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 NAME='cargo-deployer'
 VERSION='1'
@@ -6,6 +7,7 @@ HUB='oxmix'
 
 case $1 in
   push)
+    ! docker buildx rm $NAME-builder
     docker buildx create --name $NAME-builder --use
     docker buildx build --tag $HUB/$NAME:$VERSION --tag $HUB/$NAME:latest --push \
                         --platform linux/amd64,linux/arm64 .

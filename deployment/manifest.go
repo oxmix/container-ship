@@ -20,6 +20,7 @@ type Container struct {
 	Name         string   `json:"name"`
 	NameUnique   string   `yaml:",omitempty" json:"name-unique"`
 	From         string   `yaml:"from" json:"from"`
+	StopTime     uint16   `yaml:"stop-time,omitempty" json:"stop-time"`
 	Webhook      string   `yaml:"webhook,omitempty" json:"webhook"`
 	Runtime      string   `yaml:"runtime,omitempty" json:"runtime"`
 	Pid          string   `yaml:"pid,omitempty" json:"pid"`

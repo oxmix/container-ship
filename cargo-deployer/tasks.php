@@ -225,8 +225,9 @@ function containersExecute($data) {
 			shell_exec('docker ps -aqf "label='.namespaceDeployment($d['deployment-name']).'"')
 		);
 		if (!empty($ids)) {
-			echo '• Containers stop: ';
-			echo shell_exec('docker stop '.$ids.' 2>&1').PHP_EOL;
+			$time = !empty($e['stop-time']) ? '--time '.(int)$e['stop-time'].' ' : '';
+			echo '• Containers stop'.($time != '' ? ' '.$time.'sec.' : '').': ';
+			echo shell_exec('docker stop '.$time.$ids.' 2>&1').PHP_EOL;
 			echo '• Containers rm: ';
 			echo shell_exec('docker rm '.$ids.' 2>&1').PHP_EOL;
 		}
