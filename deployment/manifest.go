@@ -31,6 +31,7 @@ type Container struct {
 	Caps         []string `yaml:"caps,omitempty" json:"caps"`
 	Hosts        []string `yaml:"hosts,omitempty" json:"hosts"`
 	Ports        []string `yaml:"ports,omitempty" json:"ports"`
+	Mounts       []string `yaml:"mounts,omitempty" json:"mounts"`
 	Volumes      []string `yaml:"volumes,omitempty" json:"volumes"`
 	Environments []string `yaml:"environments,omitempty" json:"environments"`
 	Executions   []string `yaml:"executions,omitempty" json:"executions"`

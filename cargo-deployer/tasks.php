@@ -118,7 +118,10 @@ function containerCommand($e, $deploymentName): string {
 	if (!empty($e['network'])) {
 		$params .= ' --network '.$e['network'];
 	}
-	if (!empty($e['log-opt'])) {
+	if (!empty($e['restart'])) {
+		$params .= ' --restart '.$e['restart'];
+	}
+    if (!empty($e['log-opt'])) {
 		$params .= ' --log-opt '.$e['log-opt'];
 	}
 	if (!empty($e['caps'])) {
@@ -129,6 +132,9 @@ function containerCommand($e, $deploymentName): string {
 	}
 	if (!empty($e['ports'])) {
 		$params .= ' -p '.implode(' -p ', $e['ports']);
+	}
+	if (!empty($e['mounts'])) {
+		$params .= ' --mount '.implode(' --mount ', $e['mounts']);
 	}
 	if (!empty($e['volumes'])) {
 		$params .= ' -v '.implode(' -v ', $e['volumes']);
