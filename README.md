@@ -16,7 +16,9 @@ docker run -d --name container-ship \
     -v $(pwd)/assets:/assets \
     -p 127.0.0.1:8443:8443 \
     -e ENDPOINT=127.0.0.1:8443 \
-    --restart always --log-opt max-size=5m \
+    --restart always \
+    --log-driver json-file \
+    --log-opt max-size=5m \
 oxmix/container-ship
 ```
 
@@ -56,7 +58,7 @@ EOF
 * To raise docker `registry:2`
 ```shell
 docker run -d --name docker-registry \
-    --restart always --log-opt max-size=5m \
+    --restart always --log-driver json-file --log-opt max-size=5m \
     -p 127.0.0.1:5035:5035 \
     -v `pwd`/data:/var/lib/registry \
   registry:2
@@ -152,6 +154,20 @@ containers:
       - PASS={PASS_SEC}
 EOF
 ```
+### Logs alert to telegram
+* golang by matching: `fatal error:`|`panic:`
+* php by matching: `PHP Parse error`|`PHP Fatal error`|`PHP Warning`|`PHP Notice`
+* node by matching: `Error:`|`EvalError:`|`RangeError:`|`ReferenceError:`|`SyntaxError:`|`TypeError:`|`URIError:`
+```shell
+docker run ... \
+    ...
+    -e NOTIFY_MATCH='fatal error:|panic:|my custom warning' \
+    -e NOTIFY_TG_TOKEN=... \
+    -e NOTIFY_TG_CHAT_ID=... \
+    ...
+oxmix/container-ship
+```
+
 ### Deployment through file
 ```shell
 curl -kX POST https://127.0.0.1:8443/deployment --data-binary "@test-deployment.yaml"

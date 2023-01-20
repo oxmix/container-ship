@@ -17,6 +17,7 @@ type Running struct {
 		Labels       map[string]string `json:"labels"`
 		State        string            `json:"state"`
 		Status       string            `json:"status"`
+		Logs         []logsLine        `json:"logs"`
 	}
 }
 
@@ -26,6 +27,10 @@ func NewRunning(ip string, nodeName string) *Running {
 		NodeName: nodeName,
 		Update:   time.Now().Unix(),
 	}
+}
+
+func (nr Running) logStorageKey(name string) string {
+	return nr.NodeName + "=" + name
 }
 
 func (nr Running) existContainer(name string) bool {

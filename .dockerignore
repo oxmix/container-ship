@@ -6,3 +6,5 @@
 Dockerfile
 build
 cargo-deployer
+web/node_modules
+web/dist

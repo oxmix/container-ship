@@ -1,4 +1,6 @@
 .DS_Store
 .idea
-/assets/manifests/*.yaml
-/assets/nodes/*.yaml
+assets/manifests/*.yaml
+assets/nodes/*.yaml
+web/node_modules
+web/dist

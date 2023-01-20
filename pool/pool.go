@@ -1,26 +1,36 @@
 package pool
 
 import (
+	"bytes"
+	"crypto/md5"
 	"ctr-ship/deployment"
 	u "ctr-ship/utils"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
+const logStorageLimit = 1024
+
 func NewPoolNodes(dirNodes string) *NodesPool {
 	np := &NodesPool{
-		dirNodes:    dirNodes,
-		list:        &sync.Map{},
-		queue:       map[string][]deployment.Request{},
-		queueMu:     sync.Mutex{},
-		aliveDelays: &sync.Map{},
-		pool:        make(chan Running),
-		running:     &sync.Map{},
+		dirNodes:      dirNodes,
+		list:          &sync.Map{},
+		queue:         map[string][]deployment.Request{},
+		queueMu:       sync.Mutex{},
+		aliveDelays:   &sync.Map{},
+		pool:          make(chan Running),
+		running:       &sync.Map{},
+		logsMu:        sync.Mutex{},
+		logsStorage:   map[string][]logsLine{},
+		logsAlertSent: sync.Map{},
 	}
 
 	err := np.loadingNodes()
@@ -33,13 +43,16 @@ func NewPoolNodes(dirNodes string) *NodesPool {
 }
 
 type NodesPool struct {
-	dirNodes    string
-	list        *sync.Map
-	queue       map[string][]deployment.Request
-	queueMu     sync.Mutex
-	aliveDelays *sync.Map
-	pool        chan Running
-	running     *sync.Map
+	dirNodes      string
+	list          *sync.Map
+	queue         map[string][]deployment.Request
+	queueMu       sync.Mutex
+	aliveDelays   *sync.Map
+	pool          chan Running
+	running       *sync.Map
+	logsMu        sync.Mutex
+	logsStorage   map[string][]logsLine
+	logsAlertSent sync.Map
 }
 
 type Nodes interface {
@@ -53,6 +66,7 @@ type Nodes interface {
 	Receiver(ip string, body []byte) error
 	NodesStats() (ns []NodeStats)
 	GetNodes() (r []string)
+	GetLogs(node string, container string, since time.Time) ([]logsLine, error)
 }
 
 func (p *NodesPool) NodesStats() (ns []NodeStats) {
@@ -102,6 +116,9 @@ func (p *NodesPool) handlerAlive() {
 	go func() {
 		for pp := range p.pool {
 			p.running.Store(pp.NodeName, pp)
+			for _, cont := range pp.Containers {
+				p.logsParsing(pp.NodeName, cont.Name, cont.Logs)
+			}
 
 			deployment.Single.Manifests.Range(func(key, val any) bool {
 				dm := val.(deployment.Manifest)
@@ -272,4 +289,83 @@ func (p *NodesPool) getNameByIP(ip string) (name string) {
 		return true
 	})
 	return name
+}
+
+type logsLine struct {
+	Time time.Time `json:"time"`
+	Mess string    `json:"mess"`
+}
+
+func (p *NodesPool) logsParsing(node string, container string, logs []logsLine) {
+	defer p.logsMu.Unlock()
+	key := node + "+" + container
+	p.logsMu.Lock()
+	for _, l := range logs {
+		p.logsAlert(node, container, l)
+		p.logsStorage[key] = append(p.logsStorage[key], l)
+	}
+	if len(p.logsStorage[key]) > logStorageLimit {
+		p.logsStorage[key] = p.logsStorage[key][len(p.logsStorage[key])-logStorageLimit:]
+	}
+}
+
+func (p *NodesPool) logsAlert(node string, container string, l logsLine) {
+	for _, word := range strings.Split(u.Env().NotifyMatch, "|") {
+		if strings.Contains(strings.ToLower(l.Mess), strings.ToLower(word)) {
+			hashSum := md5.Sum([]byte(node + container + l.Mess))
+			hash := hex.EncodeToString(hashSum[:])
+			if _, exists := p.logsAlertSent.Load(hash); exists {
+				continue
+			}
+			p.logsAlertSent.Store(hash, struct{}{})
+			go p.logsSendNotify(fmt.Sprintf(
+				"❗️️Container Ship Logs Alert\n\nNode: %s\nContainer: %s\nTime: %s"+
+					"\nLink: https://"+u.Env().Endpoint+"/logs/"+node+"/"+container+"\n\nMessage:\n%s",
+				node, container, l.Time, l.Mess))
+			return
+		}
+	}
+}
+
+func (p *NodesPool) logsSendNotify(message string) {
+	payload, err := json.Marshal(map[string]string{
+		"chat_id": u.Env().NotifyTgChatId,
+		"text":    message,
+	})
+	if err != nil {
+		log.Printf("notify logs, err: %q", err.Error())
+		return
+	}
+	response, err := http.Post("https://api.telegram.org/bot"+u.Env().NotifyTgToken+"/sendMessage",
+		"application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		log.Printf("notify logs, err: %q", err.Error())
+	}
+	defer func(body io.ReadCloser) {
+		if err := body.Close(); err != nil {
+			log.Println("notify logs, err: failed to close response body")
+		}
+	}(response.Body)
+	if response.StatusCode != http.StatusOK {
+		log.Printf("notify logs, err: failed to send successful request, status was %q",
+			response.Status)
+	}
+}
+
+func (p *NodesPool) GetLogs(node string, container string, since time.Time) ([]logsLine, error) {
+	defer p.logsMu.Unlock()
+	key := node + "+" + container
+	p.logsMu.Lock()
+
+	if l, ok := p.logsStorage[key]; ok {
+		our := make([]logsLine, 0, 1024)
+		for _, e := range l {
+			if since.Before(e.Time) {
+				our = append(our, e)
+			}
+		}
+		return our, nil
+	} else {
+		return nil, fmt.Errorf("not found logs in the storage")
+	}
 }

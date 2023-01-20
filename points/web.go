@@ -1,4 +1,4 @@
-package web
+package points
 
 import (
 	"ctr-ship/pool"
@@ -6,7 +6,22 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
+
+func Web(pool pool.Nodes) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if !CheckRequest(w, r, pool) {
+			return
+		}
+
+		fs := http.FileServer(http.Dir("./web/dist"))
+		if strings.Count(r.RequestURI, "/") > 1 {
+			fs = http.StripPrefix(r.RequestURI, fs)
+		}
+		fs.ServeHTTP(w, r)
+	})
+}
 
 func CheckRequest(w http.ResponseWriter, r *http.Request, nodes pool.Nodes) bool {
 	ip := u.GetIP(r)

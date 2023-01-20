@@ -1,9 +1,8 @@
-package point
+package points
 
 import (
 	"ctr-ship/deployment"
 	"ctr-ship/pool"
-	"ctr-ship/web"
 	"net/http"
 	"sort"
 )
@@ -23,7 +22,7 @@ type states struct {
 
 func States(nodes pool.Nodes) {
 	http.HandleFunc("/states", func(w http.ResponseWriter, r *http.Request) {
-		if !web.CheckRequest(w, r, nodes) {
+		if !CheckRequest(w, r, nodes) {
 			return
 		}
 
@@ -71,6 +70,6 @@ func States(nodes pool.Nodes) {
 			return true
 		})
 
-		web.Success(w, out)
+		Success(w, out)
 	})
 }

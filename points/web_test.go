@@ -1,4 +1,4 @@
-package web
+package points
 
 import (
 	"ctr-ship/pool"

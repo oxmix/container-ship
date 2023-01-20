@@ -24,8 +24,9 @@ case $1 in
   local)
     docker build -t $NAME-local .
     docker rm -f $NAME
-    docker run -d --rm --name $NAME \
-      -h 127.0.0.1:8443:8443 \
+    docker run -d --name $NAME \
+      -p 8443:8443 \
+      -v "$(pwd)/assets":/assets \
       $NAME-local
     docker image prune -f
     ;;

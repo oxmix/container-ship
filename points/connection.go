@@ -1,16 +1,15 @@
-package point
+package points
 
 import (
 	"ctr-ship/deployment"
 	"ctr-ship/pool"
-	"ctr-ship/web"
 	"log"
 	"net/http"
 )
 
 func Connection(pool pool.Nodes) {
 	http.HandleFunc("/connection", func(w http.ResponseWriter, r *http.Request) {
-		if !web.CheckRequest(w, r, pool) {
+		if !CheckRequest(w, r, pool) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

@@ -1,8 +1,7 @@
-package point
+package points
 
 import (
 	"ctr-ship/pool"
-	"ctr-ship/web"
 	"net/http"
 )
 
@@ -19,7 +18,7 @@ func AllowRequest(pool pool.Nodes) {
 			return
 		}
 
-		if web.CheckRequest(w, r, pool) {
+		if CheckRequest(w, r, pool) {
 			w.WriteHeader(200)
 		}
 	})

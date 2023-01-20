@@ -1,4 +1,11 @@
-FROM golang:1.18-buster as builder
+FROM node:18-alpine as web
+WORKDIR /build
+COPY ./web .
+RUN npm i
+RUN npm run build:production
+RUN ls -la
+
+FROM golang:1.18-buster as app
 WORKDIR /app
 COPY go.* .
 RUN go mod download
@@ -7,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ctr-ship .
 
 FROM alpine:3.15
 MAINTAINER Oxmix <oxmix@me.com>
-COPY --from=builder /app/ctr-ship .
-COPY web/layout.html /web/
+COPY --from=app /app/ctr-ship .
+COPY --from=web /build/dist /web/dist
 EXPOSE 8443
 ENTRYPOINT ["./ctr-ship"]

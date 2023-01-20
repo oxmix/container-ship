@@ -1,10 +1,9 @@
-package point
+package points
 
 import (
 	"ctr-ship/deployment"
 	"ctr-ship/pool"
 	u "ctr-ship/utils"
-	"ctr-ship/web"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -15,7 +14,7 @@ import (
 
 func Deployment(pool pool.Nodes) {
 	http.HandleFunc("/deployment", func(w http.ResponseWriter, r *http.Request) {
-		if !web.CheckRequest(w, r, pool) {
+		if !CheckRequest(w, r, pool) {
 			return
 		}
 
@@ -24,7 +23,7 @@ func Deployment(pool pool.Nodes) {
 			if name != "" {
 				dm, err := deployment.Single.DeleteManifest(name)
 				if err != nil {
-					web.Failed(w, 400, err.Error())
+					Failed(w, 400, err.Error())
 					return
 				}
 
@@ -34,14 +33,14 @@ func Deployment(pool pool.Nodes) {
 				if err != nil {
 					msg := fmt.Errorf("failed add queue, err: %q", err)
 					log.Println(msg)
-					web.Failed(w, 400, msg.Error())
+					Failed(w, 400, msg.Error())
 					return
 				}
 
-				web.Success(w, struct{}{})
+				Success(w, struct{}{})
 				return
 			}
-			web.Failed(w, 400, "name is empty")
+			Failed(w, 400, "name is empty")
 			return
 		}
 
@@ -62,26 +61,26 @@ func Deployment(pool pool.Nodes) {
 		err = yaml.Unmarshal(bodyBytes, &dm)
 		if err != nil {
 			log.Printf("deployment failed: %s\n-- received --\n%s", err, string(bodyBytes))
-			web.Failed(w, 400, err.Error())
+			Failed(w, 400, err.Error())
 			return
 		}
 
 		if dm.Name == "" {
 			log.Println("deployment failed, bad manifest: name empty")
-			web.Failed(w, 400, "bad manifest: name empty")
+			Failed(w, 400, "bad manifest: name empty")
 			return
 		}
 
 		if dm.Nodes == nil {
 			log.Println("deployment failed, bad manifest: nil pool")
-			web.Failed(w, 400, "bad manifest: nil pool")
+			Failed(w, 400, "bad manifest: nil pool")
 			return
 		}
 
 		for _, c := range dm.Containers {
 			if c.Name == "" {
 				log.Println("deployment failed, bad manifest: container name empty")
-				web.Failed(w, 400, "bad manifest: container name empty")
+				Failed(w, 400, "bad manifest: container name empty")
 				return
 			}
 		}
@@ -96,7 +95,7 @@ func Deployment(pool pool.Nodes) {
 		if err != nil {
 			mess := "failed save manifest: " + err.Error()
 			log.Println(mess)
-			web.Failed(w, 400, mess)
+			Failed(w, 400, mess)
 			return
 		}
 
@@ -107,7 +106,7 @@ func Deployment(pool pool.Nodes) {
 			if err != nil {
 				mess := "failed add to queue 1, err: " + err.Error()
 				log.Println(mess)
-				web.Failed(w, 400, mess)
+				Failed(w, 400, mess)
 				return
 			}
 
@@ -127,7 +126,7 @@ func Deployment(pool pool.Nodes) {
 			if err != nil {
 				mess := "failed add to queue 2, err: " + err.Error()
 				log.Println(mess)
-				web.Failed(w, 400, mess)
+				Failed(w, 400, mess)
 				return
 			}
 
@@ -148,14 +147,14 @@ func Deployment(pool pool.Nodes) {
 			if err != nil {
 				mess := "failed add to queue 3, err: " + err.Error()
 				log.Println(mess)
-				web.Failed(w, 400, mess)
+				Failed(w, 400, mess)
 				return
 			}
 
 			removes = diff[1]
 		}
 
-		web.Success(w, map[string][]string{
+		Success(w, map[string][]string{
 			"update nodes":      updates,
 			"add to nodes":      adds,
 			"remove from nodes": removes,

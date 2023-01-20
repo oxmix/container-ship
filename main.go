@@ -2,9 +2,9 @@ package main
 
 import (
 	"ctr-ship/deployment"
+	"ctr-ship/points"
 	"ctr-ship/pool"
 	u "ctr-ship/utils"
-	"ctr-ship/web/point"
 	"log"
 	"net/http"
 )
@@ -33,13 +33,14 @@ func main() {
 
 	var nodes pool.Nodes = pool.NewPoolNodes(DirNodes)
 
-	point.Main(nodes)
-	point.States(nodes)
-	point.Connection(nodes)
-	point.CargoDeployer(nodes)
-	point.Deployment(nodes)
-	point.Nodes(nodes)
-	point.AllowRequest(nodes)
+	points.Web(nodes)
+	points.States(nodes)
+	points.Connection(nodes)
+	points.CargoDeployer(nodes)
+	points.Deployment(nodes)
+	points.Nodes(nodes)
+	points.AllowRequest(nodes)
+	points.Logs(nodes)
 
 	log.Println("handlers is setup")
 

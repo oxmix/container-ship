@@ -100,7 +100,7 @@ fi
 printf "• Run cargo container: "
 docker run -d --name ` + u.Env().Namespace + `.cargo-deployer \
 	--label ` + u.Env().Namespace + `.deployment=` + u.Env().Namespace + `.` + CargoDeploymentName + ` \
-	--restart always --log-opt max-size=5m \
+	--restart always --log-driver json-file --log-opt max-size=5m \
 	-v /var/run/docker.sock:/var/run/docker.sock:rw \
 	` + envs + ` oxmix/cargo-deployer:` + u.Env().CargoVersion + ` 
 

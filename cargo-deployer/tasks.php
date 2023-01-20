@@ -4,279 +4,320 @@
 echo '['.date('Y-m-d H:i:s').'] Start'.PHP_EOL;
 sleep(1);
 
-$timer = 8;
-$iteration = 0;
-
 declare(ticks=1);
 pcntl_signal(SIGTERM, function () {
 	exit(0);
 });
 
-function endpoint(): string {
-	return $_SERVER['ENDPOINT'] ?? 'https://host.docker.internal:8443';
-}
+new Tasks;
 
-function namespaceShip(): string {
-	return $_SERVER['NAMESPACE'] ?? 'ctr-ship';
-}
+class Tasks {
+	const EACH_ITER = 8;
+	public int $iteration = 0;
+	public array $sinceLogs = [];
 
-function namespaceDeployment($name = ''): string {
-	return namespaceShip().'.deployment'.(!empty($name) ? '='.$name : '');
-}
+	public function __construct() {
+		while (true) {
+			++$this->iteration;
+			$result = $this->push();
 
-function push($iteration) {
-	$curl = curl_init(endpoint().'/nodes');
-	curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
-	curl_setopt($curl, CURLOPT_TIMEOUT, 10);
-	curl_setopt($curl, CURLOPT_POST, true);
-	curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode([
-		'iteration'  => $iteration,
-		'uptime'     => trim(shell_exec('uptime')),
-		'containers' => containers()
-	]));
-	curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-	curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-	$json = curl_exec($curl);
-	$code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-	$message = curl_error($curl);
-	curl_close($curl);
+			if (($result['ok'] ?? false) === true) {
+				if (!empty($result['data']['execs'])) {
+					echo '['.date('Y-m-d H:i:s').'] Received data for deployments'.PHP_EOL;
+					$this->containersExecute($result['data']['execs']);
+					echo '['.date('Y-m-d H:i:s').'] End deployments'.PHP_EOL;
 
-	if ($code >= 500) {
-		return [
-			'status'  => 'failed',
-			'code'    => $code,
-			'message' => $message,
-			'result'  => json_decode($json, true)
-		];
+					$this->push();
+				}
+
+			} else {
+				echo '['.date('Y-m-d H:i:s').'] '.print_r($result, true).PHP_EOL;
+			}
+
+			sleep(self::EACH_ITER);
+		}
+
 	}
 
-	if (empty($json)) {
-		return [
-			'status'  => 'failed',
-			'code'    => $code,
-			'message' => 'empty-response'
-		];
+	public function endpoint(): string {
+		return $_SERVER['ENDPOINT'] ?? 'https://host.docker.internal:8443';
 	}
 
-	return json_decode($json, true);
-}
+	public function namespaceShip(): string {
+		return $_SERVER['NAMESPACE'] ?? 'ctr-ship';
+	}
 
-function containers(): array {
-	$curl = curl_init('http://localhost/v1.40/containers/json?filters='.json_encode([
-			'label' => [
-				namespaceDeployment()
-			]
+	public function namespaceDeployment($name = ''): string {
+		return $this->namespaceShip().'.deployment'.(!empty($name) ? '='.$name : '');
+	}
+
+	public function push() {
+		$curl = curl_init($this->endpoint().'/nodes');
+		curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
+		curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+		curl_setopt($curl, CURLOPT_POST, true);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode([
+			'iteration'  => $this->iteration,
+			'uptime'     => trim(shell_exec('uptime')),
+			'containers' => $this->containers()
 		]));
-	curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
-	curl_setopt($curl, CURLOPT_TIMEOUT, 10);
-	curl_setopt($curl, CURLOPT_UNIX_SOCKET_PATH, '/var/run/docker.sock');
-	curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-	$json = curl_exec($curl);
-	$code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-	curl_close($curl);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		$json = curl_exec($curl);
+		$code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+		$message = curl_error($curl);
+		curl_close($curl);
 
-	if ($code > 200 || empty($json)) {
-		return [
-			'ok'     => false,
-			'code'   => $code,
-			'result' => $json
-		];
-	}
-
-	$containers = [];
-	foreach (json_decode($json, true) as $e) {
-		$containers[] = [
-			'id'           => $e['Id'],
-			'idShort'      => substr($e['Id'], 0, 12),
-			'name'         => substr($e['Names'][0], 1),
-			'imageId'      => $e['ImageID'],
-			'imageIdShort' => substr($e['ImageID'], 7, 12),
-			'labels'       => $e['Labels'],
-			'state'        => $e['State'],
-			'status'       => $e['Status']
-		];
-	}
-
-	return $containers;
-}
-
-function containerCommand($e, $deploymentName): string {
-	$params = '';
-
-	if (!empty($e['runtime']) && $e['runtime'] == 'nvidia'
-		&& !empty(trim(shell_exec('lspci | grep -i vga | grep -i nvidia')))) {
-		$params .= ' --runtime=nvidia';
-	}
-	if (!empty($e['pid'])) {
-		$params .= ' --pid='.$e['pid'];
-	}
-	if (!empty($e['privileged'])) {
-		$params .= ' --privileged';
-	}
-	if (!empty($e['network'])) {
-		$params .= ' --network '.$e['network'];
-	}
-	if (!empty($e['restart'])) {
-		$params .= ' --restart '.$e['restart'];
-	}
-    if (!empty($e['log-opt'])) {
-		$params .= ' --log-opt '.$e['log-opt'];
-	}
-	if (!empty($e['caps'])) {
-		$params .= ' --cap-add='.implode(' --cap-add=', $e['caps']);
-	}
-	if (!empty($e['hosts'])) {
-		$params .= ' --add-host='.implode(' --add-host=', $e['hosts']);
-	}
-	if (!empty($e['ports'])) {
-		$params .= ' -p '.implode(' -p ', $e['ports']);
-	}
-	if (!empty($e['mounts'])) {
-		$params .= ' --mount '.implode(' --mount ', $e['mounts']);
-	}
-	if (!empty($e['volumes'])) {
-		$params .= ' -v '.implode(' -v ', $e['volumes']);
-	}
-	if (!empty($e['environments'])) {
-		$params .= ' -e '.implode(' -e ', $e['environments']);
-	}
-
-	return 'docker run -d'
-		.' --name '.$e['name']
-		.' --label '.namespaceDeployment($deploymentName)
-		.' '.$params.' '.$e['from'];
-}
-
-function selfUpgrade($d) {
-	echo '• Run self upgrade'.PHP_EOL;
-
-	if (empty($d['containers'][0])) {
-		echo 'Error: container manifest is undefined'.PHP_EOL;
-		return;
-	}
-
-	$dc = $d['containers'][0];
-
-	echo '• Pulling "'.$dc['from'].'": ';
-	echo shell_exec('docker pull '.$dc['from']).PHP_EOL;
-
-	$oldId = shell_exec('docker ps -aqf=name='.$dc['name']);
-	if (!empty($oldId)) {
-		echo '• Container rename'.PHP_EOL;
-		shell_exec('docker rename '.$dc['name'].' '.$dc['name'].'-old');
-	}
-
-	echo '• Container run: ';
-	echo shell_exec(containerCommand($dc, $d['deployment-name']).' 2>&1').PHP_EOL;
-
-	if (!empty($oldId)) {
-		echo '• Container '.$dc['name'].'-old rm force: ';
-		echo shell_exec('docker rm -f '.$dc['name'].'-old 2>&1').PHP_EOL;
-	}
-
-	exit;
-}
-
-function destroy() {
-	$ids = explode(PHP_EOL,
-		trim(shell_exec('docker ps -a --filter "label='.namespaceDeployment().'" --format "{{.Names}}"'))
-	);
-	if (!empty($ids)) {
-		$spaceCargo = namespaceShip().'.cargo-deployer';
-		$ids = array_flip($ids);
-		unset($ids[$spaceCargo]);
-		$ids = implode(' ', array_flip($ids));
-
-		echo '• Containers destroy: ';
-		echo shell_exec('docker rm -f '.$ids.' 2>&1').PHP_EOL;
-
-		echo '• Self destroy: ';
-		echo shell_exec('docker rm -f '.$spaceCargo.' 2>&1').PHP_EOL;
-	}
-	exit;
-}
-
-function containersExecute($data) {
-	$data = json_decode($data, true);
-
-	if (empty($data)) {
-		echo '• Empty data options'.PHP_EOL;
-
-		return;
-	}
-
-	foreach ($data as $d) {
-		if ($d['self-upgrade']) {
-			selfUpgrade($d);
+		if ($code >= 500) {
+			return [
+				'status'  => 'failed',
+				'code'    => $code,
+				'message' => $message,
+				'result'  => json_decode($json, true)
+			];
 		}
 
-		if (($d['destroy'] ?? false) === true) {
-			destroy();
+		if (empty($json)) {
+			return [
+				'status'  => 'failed',
+				'code'    => $code,
+				'message' => 'empty-response'
+			];
 		}
 
-		echo '••••••••••'.PHP_EOL;
-		echo '• Execution deployment: '.$d['deployment-name'].PHP_EOL;
+		return json_decode($json, true);
+	}
 
-		if (!isset($d['containers']))
-			$d['containers'] = [];
+	public function requestDocker(string $endpoint): string {
+		$curl = curl_init($endpoint);
+		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
+		curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+		curl_setopt($curl, CURLOPT_UNIX_SOCKET_PATH, '/var/run/docker.sock');
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		$json = curl_exec($curl);
+		$code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+		curl_close($curl);
 
-		foreach ($d['containers'] as $e) {
-			echo '• Pulling "'.$e['from'].'": ';
-			echo shell_exec('docker pull '.$e['from']).PHP_EOL;
+		if ($code >= 500) {
+			error_log(json_encode([
+				'curlDocker' => $endpoint,
+				'code'       => $code,
+				'result'     => $json
+			]));
 		}
 
-		$ids = str_replace(PHP_EOL, ' ',
-			shell_exec('docker ps -aqf "label='.namespaceDeployment($d['deployment-name']).'"')
+		return $json;
+	}
+
+	public function containers(): array {
+		$json = $this->requestDocker(
+			'http://localhost/v1.40/containers/json?filters='.json_encode([
+				'label' => [
+					$this->namespaceDeployment()
+				]
+			]));
+
+		if (empty($json)) {
+			return [];
+		}
+
+		$containers = [];
+		foreach (json_decode($json, true) as $e) {
+			$logs = [];
+			if (!isset($this->sinceLogs[$e['Id']])) {
+				$this->sinceLogs[$e['Id']] = time();
+			}
+			$logsText = $this->requestDocker(
+				'http://localhost/v1.40/containers/'.$e['Id'].'/logs'
+				.'?since='.$this->sinceLogs[$e['Id']]
+				.'&stdout=true&stderr=true&timestamps=true');
+
+			foreach (explode(PHP_EOL, $logsText) as $str) {
+				if (!$time = substr($str, 8, 30))
+					continue;
+				$logs[] = [
+					'time' => $time,
+					'mess' => substr($str, 8 + 31),
+				];
+			}
+			$this->sinceLogs[$e['Id']] = time();
+
+			$containers[] = [
+				'id'           => $e['Id'],
+				'idShort'      => substr($e['Id'], 0, 12),
+				'name'         => substr($e['Names'][0], 1),
+				'imageId'      => $e['ImageID'],
+				'imageIdShort' => substr($e['ImageID'], 7, 12),
+				'labels'       => $e['Labels'],
+				'state'        => $e['State'],
+				'status'       => $e['Status'],
+				'logs'         => $logs,
+			];
+		}
+
+		return $containers;
+	}
+
+	public function containerCommand($e, $deploymentName): string {
+		$params = '';
+
+		if (!empty($e['runtime']) && $e['runtime'] == 'nvidia'
+			&& !empty(trim(shell_exec('lspci | grep -i vga | grep -i nvidia')))) {
+			$params .= ' --runtime=nvidia';
+		}
+		if (!empty($e['pid'])) {
+			$params .= ' --pid='.$e['pid'];
+		}
+		if (!empty($e['privileged'])) {
+			$params .= ' --privileged';
+		}
+		if (!empty($e['network'])) {
+			$params .= ' --network '.$e['network'];
+		}
+		if (!empty($e['restart'])) {
+			$params .= ' --restart '.$e['restart'];
+		}
+		if (!empty($e['caps'])) {
+			$params .= ' --cap-add='.implode(' --cap-add=', $e['caps']);
+		}
+		if (!empty($e['hosts'])) {
+			$params .= ' --add-host='.implode(' --add-host=', $e['hosts']);
+		}
+		if (!empty($e['ports'])) {
+			$params .= ' -p '.implode(' -p ', $e['ports']);
+		}
+		if (!empty($e['mounts'])) {
+			$params .= ' --mount '.implode(' --mount ', $e['mounts']);
+		}
+		if (!empty($e['volumes'])) {
+			$params .= ' -v '.implode(' -v ', $e['volumes']);
+		}
+		if (!empty($e['environments'])) {
+			$params .= ' -e '.implode(' -e ', $e['environments']);
+		}
+
+		return 'docker run -d'
+			.' --name '.$e['name']
+			.' --label '.$this->namespaceDeployment($deploymentName)
+			.' --log-driver json-file'
+			.' --log-opt max-size=5m'
+			.' '.$params.' '.$e['from'];
+	}
+
+	public function selfUpgrade($d) {
+		echo '• Run self upgrade'.PHP_EOL;
+
+		if (empty($d['containers'][0])) {
+			echo 'Error: container manifest is undefined'.PHP_EOL;
+
+			return;
+		}
+
+		$dc = $d['containers'][0];
+
+		echo '• Pulling "'.$dc['from'].'": ';
+		echo shell_exec('docker pull '.$dc['from']).PHP_EOL;
+
+		$oldId = shell_exec('docker ps -aqf=name='.$dc['name']);
+		if (!empty($oldId)) {
+			echo '• Container rename'.PHP_EOL;
+			shell_exec('docker rename '.$dc['name'].' '.$dc['name'].'-old');
+		}
+
+		echo '• Container run: ';
+		echo shell_exec($this->containerCommand($dc, $d['deployment-name']).' 2>&1').PHP_EOL;
+
+		if (!empty($oldId)) {
+			echo '• Container '.$dc['name'].'-old rm force: ';
+			echo shell_exec('docker rm -f '.$dc['name'].'-old 2>&1').PHP_EOL;
+		}
+
+		exit;
+	}
+
+	public function destroy() {
+		$ids = explode(PHP_EOL,
+			trim(shell_exec('docker ps -a --filter "label='
+				.$this->namespaceDeployment().'" --format "{{.Names}}"'))
 		);
 		if (!empty($ids)) {
-			$time = !empty($e['stop-time']) ? '--time '.(int)$e['stop-time'].' ' : '';
-			echo '• Containers stop'.($time != '' ? ' '.$time.'sec.' : '').': ';
-			echo shell_exec('docker stop '.$time.$ids.' 2>&1').PHP_EOL;
-			echo '• Containers rm: ';
-			echo shell_exec('docker rm '.$ids.' 2>&1').PHP_EOL;
+			$spaceCargo = $this->namespaceShip().'.cargo-deployer';
+			$ids = array_flip($ids);
+			unset($ids[$spaceCargo]);
+			$ids = implode(' ', array_flip($ids));
+
+			echo '• Containers destroy: ';
+			echo shell_exec('docker rm -f '.$ids.' 2>&1').PHP_EOL;
+
+			echo '• Self destroy: ';
+			echo shell_exec('docker rm -f '.$spaceCargo.' 2>&1').PHP_EOL;
+		}
+		exit;
+	}
+
+	public function containersExecute($data) {
+		$data = json_decode($data, true);
+
+		if (empty($data)) {
+			echo '• Empty data options'.PHP_EOL;
+
+			return;
 		}
 
-		foreach ($d['containers'] as $e) {
-			echo '• Container run "'.$e['name'].'": ';
-			echo shell_exec(containerCommand($e, $d['deployment-name']).' 2>&1').PHP_EOL;
-
-			if (!empty($e['webhook'])) {
-				echo '• Webhook touch "'.$e['webhook'].'": ';
-				echo file_get_contents($e['webhook']).PHP_EOL;
+		foreach ($data as $d) {
+			if ($d['self-upgrade']) {
+				$this->selfUpgrade($d);
 			}
 
-			if (!empty($e['executions'])) {
-				echo '• Executions in container'.PHP_EOL;
-				foreach ($e['executions'] as $x) {
-					echo shell_exec('docker exec '.$e['name'].' '.$x);
+			if (($d['destroy'] ?? false) === true) {
+				$this->destroy();
+			}
+
+			echo '••••••••••'.PHP_EOL;
+			echo '• Execution deployment: '.$d['deployment-name'].PHP_EOL;
+
+			if (!isset($d['containers']))
+				$d['containers'] = [];
+
+			foreach ($d['containers'] as $e) {
+				echo '• Pulling "'.$e['from'].'": ';
+				echo shell_exec('docker pull '.$e['from']).PHP_EOL;
+			}
+
+			$ids = str_replace(PHP_EOL, ' ',
+				shell_exec('docker ps -aqf "label='.$this->namespaceDeployment($d['deployment-name']).'"')
+			);
+			if (!empty($ids)) {
+				$time = !empty($e['stop-time']) ? '--time '.(int)$e['stop-time'].' ' : '';
+				echo '• Containers stop'.($time != '' ? ' '.$time.'sec.' : '').': ';
+				echo shell_exec('docker stop '.$time.$ids.' 2>&1').PHP_EOL;
+				echo '• Containers rm: ';
+				echo shell_exec('docker rm '.$ids.' 2>&1').PHP_EOL;
+			}
+
+			foreach ($d['containers'] as $e) {
+				echo '• Container run "'.$e['name'].'": ';
+				echo shell_exec($this->containerCommand($e, $d['deployment-name']).' 2>&1').PHP_EOL;
+
+				if (!empty($e['webhook'])) {
+					echo '• Webhook touch "'.$e['webhook'].'": ';
+					echo file_get_contents($e['webhook']).PHP_EOL;
+				}
+
+				if (!empty($e['executions'])) {
+					echo '• Executions in container'.PHP_EOL;
+					foreach ($e['executions'] as $x) {
+						echo shell_exec('docker exec '.$e['name'].' '.$x);
+					}
 				}
 			}
+
+			echo '••••••••••'.PHP_EOL;
 		}
 
-		echo '••••••••••'.PHP_EOL;
+		echo '• Image prune'.PHP_EOL;
+		echo shell_exec('docker image prune -f').PHP_EOL;
 	}
-
-	echo '• Image prune'.PHP_EOL;
-	echo shell_exec('docker image prune -f').PHP_EOL;
-}
-
-while (true) {
-	$result = push(++$iteration);
-
-	if (($result['ok'] ?? false) === true) {
-		if (!empty($result['data']['execs'])) {
-			echo '['.date('Y-m-d H:i:s').'] Received data for deployments'.PHP_EOL;
-			containersExecute($result['data']['execs']);
-			echo '['.date('Y-m-d H:i:s').'] End deployments'.PHP_EOL;
-
-			push($iteration);
-		}
-
-	} else {
-		echo '['.date('Y-m-d H:i:s').'] '.print_r($result, true).PHP_EOL;
-	}
-
-	sleep($timer);
 }

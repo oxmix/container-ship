@@ -10,10 +10,13 @@ func getEnv(key string, def string) string {
 }
 
 type env struct {
-	Environment  string
-	Endpoint     string
-	Namespace    string
-	CargoVersion string
+	Environment    string
+	Endpoint       string
+	Namespace      string
+	CargoVersion   string
+	NotifyMatch    string
+	NotifyTgToken  string
+	NotifyTgChatId string
 }
 
 func Env() *env {
@@ -22,5 +25,8 @@ func Env() *env {
 		getEnv("ENDPOINT", "127.0.0.1:8443"),
 		getEnv("NAMESPACE", "ctr-ship"),
 		getEnv("CARGO_VERSION", "1"),
+		getEnv("NOTIFY_MATCH", ""),
+		getEnv("NOTIFY_TG_TOKEN", ""),
+		getEnv("NOTIFY_TG_CHAT_ID", ""),
 	}
 }

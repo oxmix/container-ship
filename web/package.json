@@ -1,0 +1,34 @@
+{
+  "name": "container-ship.web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "webpack --watch --progress --color",
+    "build": "webpack --progress --color",
+    "build:production": "webpack --progress --color --env build=production"
+  },
+  "author": "Oxmix",
+  "license": "ISC",
+  "dependencies": {
+    "vue": "^3.2.41",
+    "vue-router": "^4.1.6"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.0",
+    "@webpack-cli/generators": "^2.5.0",
+    "babel-loader": "^8.2.3",
+    "clean-webpack-plugin": "^4.0.0",
+    "css-loader": "^6.5.0",
+    "css-minimizer-webpack-plugin": "^3.1.1",
+    "eslint": "^8.26.0",
+    "eslint-plugin-vue": "^9.7.0",
+    "eslint-webpack-plugin": "^3.2.0",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.4.3",
+    "terser-webpack-plugin": "^5.2.5",
+    "vue-loader": "^17.0.1",
+    "webpack": "^5.61.0"
+  }
+}
