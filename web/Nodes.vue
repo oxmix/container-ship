@@ -79,7 +79,7 @@ export default {
 
 .nodes li {
   margin: 0 5px 5px 0;
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg-1);
   border-radius: 10px;
   padding: 4px 8px;
   font-size: .8rem;
@@ -90,6 +90,6 @@ export default {
 }
 
 .nodes li.wrong {
-  border-color: orangered;
+  border-color: rgba(255, 69, 0, .5);
 }
 </style>

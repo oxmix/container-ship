@@ -5,13 +5,15 @@ import (
 	"ctr-ship/pool"
 	"net/http"
 	"sort"
+	"time"
 )
 
 type statesContainers struct {
-	Node   string `json:"node"`
-	Name   string `json:"name"`
-	State  string `json:"state"`
-	Status string `json:"status"`
+	Node     string `json:"node"`
+	NodeLive int64  `json:"nodeLive"`
+	Name     string `json:"name"`
+	State    string `json:"state"`
+	Status   string `json:"status"`
 }
 
 type states struct {
@@ -41,10 +43,11 @@ func States(nodes pool.Nodes) {
 					for _, c2 := range nr.Containers {
 						if c2.Name == dm.GetContainerName(c.Name) {
 							state = statesContainers{
-								Node:   nr.NodeName,
-								Name:   c.Name,
-								State:  c2.State,
-								Status: c2.Status,
+								Node:     nr.NodeName,
+								NodeLive: time.Now().Unix() - nr.Update,
+								Name:     c.Name,
+								State:    c2.State,
+								Status:   c2.Status,
 							}
 						}
 					}

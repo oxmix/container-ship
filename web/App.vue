@@ -18,15 +18,30 @@ export default {}
 </script>
 
 <style>
+:root {
+  --text: rgba(255, 255, 255, .88);
+  --bg-02: rgba(255, 255, 255, .02);
+  --bg-03: rgba(255, 255, 255, .03);
+  --bg-05: rgba(255, 255, 255, .05);
+  --bg-1: rgba(255, 255, 255, .1);
+  --bg-2: rgba(255, 255, 255, .2);
+  --bg-3: rgba(255, 255, 255, .3);
+}
+
 body {
   font-family: sans-serif;
   font-weight: 100;
   margin: 30px;
-  color: #333;
+  color: var(--text);
+  background-color: #121212;
+  letter-spacing: .2px;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: #333;
+  color: var(--text);
 }
 
 a:hover {
@@ -74,7 +89,7 @@ nav,
 nav:after {
   display: block;
   content: '';
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--bg-1);
   position: absolute;
   left: 0;
   right: 0;
@@ -130,7 +145,7 @@ nav a:hover:after {
 }
 
 fieldset {
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg-1);
   border-radius: 2px;
   margin: 10px;
 }
@@ -138,7 +153,7 @@ fieldset {
 legend {
   white-space: nowrap;
   padding: 5px 10px;
-  color: #333;
+  color: var(--text);
   position: relative;
 }
 
@@ -146,7 +161,7 @@ legend:before {
   position: absolute;
   content: '';
   height: 6px;
-  border-left: 1px solid #ddd;
+  border-left: 1px solid var(--bg-1);
   left: 0;
   top: 10px;
 }
@@ -155,7 +170,7 @@ legend:after {
   position: absolute;
   content: '';
   height: 6px;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--bg-1);
   right: 0;
   top: 10px;
 }
@@ -164,7 +179,7 @@ legend > span {
   color: grey;
   margin-left: 10px;
   font-size: .8rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg-1);
   border-radius: 10px;
   padding: 2px 5px;
   position: relative;
@@ -174,6 +189,6 @@ legend > span {
 fieldset:hover,
 fieldset:hover > legend:before,
 fieldset:hover > legend:after {
-  border-color: #888;
+  border-color: var(--bg-3);
 }
 </style>

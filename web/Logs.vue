@@ -4,13 +4,20 @@
       <legend>{{ $route.params.container }}<span>{{ $route.params.node }}</span></legend>
       <!-- eslint-disable vue/no-v-html, vue/html-closing-bracket-newline, vue/html-indent -->
       <TransitionGroup tag="div" name="list" @vnode-updated="nodeUpdated">
-      <pre v-for="e in logs" :key="e.time"><span
-        class="logs-time">{{ e.time }}: </span><span
-        v-if="e.json" class="logs-message" v-html="e.json" /><span
-        v-else>{{ e.text }}</span></pre>
+        <slot v-for="e in logs" :key="e.time">
+          <pre v-if="e.pack.length > 1"><div
+            class="logs-time">{{ e.time }}: </div><slot
+            v-for="(p, k) in e.pack" :key="k"><div
+            v-if="p.json" v-html="p.json" /><div
+            v-else>{{ p.text }}</div></slot></pre>
+          <pre v-else-if="e.pack.length > 0"><span
+            class="logs-time">{{ e.time }}: </span><span
+            v-if="e.pack[0].json" v-html="e.pack[0].json" /><span
+            v-else>{{ e.pack[0].text }}</span></pre>
+        </slot>
       </TransitionGroup>
       <!--eslint-enable-->
-      {{ err }}
+      <div ref="logs-err" class="logs-err" />
     </fieldset>
   </div>
 </template>
@@ -23,8 +30,7 @@ export default {
       updater: null,
       logs: [],
       lastLine: {time: ''},
-      autoScroll: true,
-      err: ''
+      autoScroll: true
     };
   },
   created() {
@@ -50,23 +56,33 @@ export default {
             const clf = document.querySelector('.logs > fieldset');
             this.autoScroll = clf.scrollHeight < clf.scrollTop + clf.offsetHeight;
 
+            const data = {};
             r.data.forEach((e) => {
+              if (e.mess === '') {
+                return;
+              }
+              const time = this.time(e.time);
+              if (!data[time]) {
+                data[time] = [];
+              }
               if (e.mess.substring(0, 1) === '{') {
-                this.logs.push({
-                  time: this.time(e.time),
-                  json: this.jsonPretty(JSON.parse(e.mess))
-                });
+                data[time].push({json: this.jsonPretty(JSON.parse(e.mess))});
               } else {
-                this.logs.push({
-                  time: this.time(e.time),
-                  text: e.mess
-                });
+                data[time].push({text: e.mess});
               }
             });
+
+            Object.keys(data).forEach((time) => {
+              this.logs.push({
+                time: time,
+                pack: data[time]
+              });
+            });
+
             this.lastLine = r.data[r.data.length - 1] || {time: this.lastLine.time}
-            this.err = '';
+            this.$refs['logs-err'].remove();
           } else {
-            this.err = r.message + ', auto update via 3 sec...';
+            this.$refs['logs-err'].innerText = r.message + ', auto update via 3 sec...';
           }
         })
     },
@@ -106,12 +122,12 @@ export default {
 <style>
 .list-enter-active,
 .list-leave-active {
-  transition: background-color 3s linear;
+  transition: background-color 1s linear;
 }
 
 .list-enter-from,
 .list-leave-to {
-  background-color: #eee;
+  background-color: var(--bg-1);
 }
 
 .logs fieldset {
@@ -125,14 +141,13 @@ export default {
   color: grey;
 }
 
-.logs-message {
-  white-space: break-spaces;
-}
-
+.logs-err,
 pre {
   border-radius: 2px;
   padding: 10px;
   margin: 10px 0;
+  white-space: break-spaces;
+  background-color: var(--bg-02);
 }
 
 .logs-json-key {

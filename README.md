@@ -177,3 +177,8 @@ curl -kX POST https://127.0.0.1:8443/deployment --data-binary "@test-deployment.
 * Shows stats by nodes
 
 ![Preview](.github/preview/nodes.png)
+
+### Example `Logs`
+* Showing logs realtime from container with support json pretty
+
+![Preview](.github/preview/logs.png)
