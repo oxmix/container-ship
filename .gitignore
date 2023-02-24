@@ -4,3 +4,5 @@ assets/manifests/*.yaml
 assets/nodes/*.yaml
 web/node_modules
 web/dist
+example/assets
+example/registry

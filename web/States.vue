@@ -101,10 +101,6 @@ export default {
   border-radius: 2px;
 }
 
-.deployments table tbody tr:hover {
-  background-color: var(--bg-dark-05);
-}
-
 .deployments .label {
   margin: 0 5px 5px 0;
   border: 1px solid #ddd;

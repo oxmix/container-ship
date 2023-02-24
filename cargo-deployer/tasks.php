@@ -197,13 +197,18 @@ class Tasks {
 		if (!empty($e['environments'])) {
 			$params .= ' -e '.implode(' -e ', $e['environments']);
 		}
+		if (!empty($e['entrypoint'])) {
+		    $params .= ' --entrypoint '.$e['entrypoint'];
+		}
 
 		return 'docker run -d'
 			.' --name '.$e['name']
 			.' --label '.$this->namespaceDeployment($deploymentName)
 			.' --log-driver json-file'
 			.' --log-opt max-size=5m'
-			.' '.$params.' '.$e['from'];
+			.' '.$params
+			.' '.$e['from']
+			.(!empty($e['command']) ? ' '.$e['command'] : '');
 	}
 
 	public function selfUpgrade($d) {

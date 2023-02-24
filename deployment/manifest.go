@@ -34,6 +34,8 @@ type Container struct {
 	Mounts       []string `yaml:"mounts,omitempty" json:"mounts"`
 	Volumes      []string `yaml:"volumes,omitempty" json:"volumes"`
 	Environments []string `yaml:"environments,omitempty" json:"environments"`
+	Entrypoint   string   `yaml:"entrypoint,omitempty" json:"entrypoint"`
+	Command      string   `yaml:"command,omitempty" json:"command"`
 	Executions   []string `yaml:"executions,omitempty" json:"executions"`
 }
 
