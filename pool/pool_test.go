@@ -71,7 +71,7 @@ func TestAddQueueCaseRun(t *testing.T) {
 		Containers: []deployment.Container{
 			{
 				Name: "test",
-				Environments: []string{
+				Environment: []string{
 					"EXAMPLE=TEST",
 					"TEST={{MAGICAL_ENV}}",
 				},
@@ -127,16 +127,16 @@ func TestGetQueue(t *testing.T) {
 			"got", three.DeploymentName)
 	}
 	expected = "EXAMPLE=TEST"
-	if three.Containers[0].Environments[0] != expected {
+	if three.Containers[0].Environment[0] != expected {
 		t.Error("usualEnv",
 			"expected", expected,
-			"got", three.Containers[0].Environments[0])
+			"got", three.Containers[0].Environment[0])
 	}
 	expected = "TEST=--secret--"
-	if three.Containers[0].Environments[1] != expected {
+	if three.Containers[0].Environment[1] != expected {
 		t.Error("magicEnvs",
 			"expected", expected,
-			"got", three.Containers[0].Environments[1])
+			"got", three.Containers[0].Environment[1])
 	}
 
 	bt = pool.GetQueue("127.0.0.1")

@@ -17,26 +17,26 @@ type Manifest struct {
 }
 
 type Container struct {
-	Name         string   `json:"name"`
-	NameUnique   string   `yaml:",omitempty" json:"name-unique"`
-	From         string   `yaml:"from" json:"from"`
-	StopTime     uint16   `yaml:"stop-time,omitempty" json:"stop-time"`
-	Webhook      string   `yaml:"webhook,omitempty" json:"webhook"`
-	Runtime      string   `yaml:"runtime,omitempty" json:"runtime"`
-	Pid          string   `yaml:"pid,omitempty" json:"pid"`
-	Privileged   bool     `yaml:"privileged,omitempty" json:"privileged"`
-	Network      string   `yaml:"network,omitempty" json:"network"`
-	Restart      string   `yaml:"restart,omitempty" json:"restart"`
-	LogOpt       string   `yaml:"log-opt,omitempty" json:"log-opt"`
-	Caps         []string `yaml:"caps,omitempty" json:"caps"`
-	Hosts        []string `yaml:"hosts,omitempty" json:"hosts"`
-	Ports        []string `yaml:"ports,omitempty" json:"ports"`
-	Mounts       []string `yaml:"mounts,omitempty" json:"mounts"`
-	Volumes      []string `yaml:"volumes,omitempty" json:"volumes"`
-	Environments []string `yaml:"environments,omitempty" json:"environments"`
-	Entrypoint   string   `yaml:"entrypoint,omitempty" json:"entrypoint"`
-	Command      string   `yaml:"command,omitempty" json:"command"`
-	Executions   []string `yaml:"executions,omitempty" json:"executions"`
+	Name        string   `json:"name"`
+	NameUnique  string   `yaml:",omitempty" json:"name-unique"`
+	From        string   `yaml:"from" json:"from"`
+	StopTime    uint16   `yaml:"stop-time,omitempty" json:"stop-time"`
+	Webhook     string   `yaml:"webhook,omitempty" json:"webhook"`
+	Runtime     string   `yaml:"runtime,omitempty" json:"runtime"`
+	Pid         string   `yaml:"pid,omitempty" json:"pid"`
+	Privileged  bool     `yaml:"privileged,omitempty" json:"privileged"`
+	Network     string   `yaml:"network,omitempty" json:"network"`
+	Restart     string   `yaml:"restart,omitempty" json:"restart"`
+	LogOpt      string   `yaml:"log-opt,omitempty" json:"log-opt"`
+	Caps        []string `yaml:"caps,omitempty" json:"caps"`
+	Hosts       []string `yaml:"hosts,omitempty" json:"hosts"`
+	Ports       []string `yaml:"ports,omitempty" json:"ports"`
+	Mounts      []string `yaml:"mounts,omitempty" json:"mounts"`
+	Volumes     []string `yaml:"volumes,omitempty" json:"volumes"`
+	Environment []string `yaml:"environment,omitempty" json:"environment"`
+	Entrypoint  string   `yaml:"entrypoint,omitempty" json:"entrypoint"`
+	Command     string   `yaml:"command,omitempty" json:"command"`
+	Executions  []string `yaml:"executions,omitempty" json:"executions"`
 }
 
 func NewManifest() Manifest {

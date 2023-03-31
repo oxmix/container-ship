@@ -267,14 +267,14 @@ func (p *NodesPool) GetNodes() (r []string) {
 func (p *NodesPool) magicEnvs(dcs []deployment.Container, nc *Node) (ndc []deployment.Container) {
 	ndc = append(ndc, dcs...)
 	for k, c := range ndc {
-		var envs = make([]string, 0, len(c.Environments))
-		envs = append(envs, c.Environments...)
+		var envs = make([]string, 0, len(c.Environment))
+		envs = append(envs, c.Environment...)
 		for kk := range envs {
 			for _, v := range nc.Variables {
 				envs[kk] = strings.ReplaceAll(envs[kk], "{{"+v.Key+"}}", v.Val)
 			}
 		}
-		ndc[k].Environments = envs
+		ndc[k].Environment = envs
 	}
 	return ndc
 }

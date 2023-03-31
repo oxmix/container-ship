@@ -194,8 +194,8 @@ class Tasks {
 		if (!empty($e['volumes'])) {
 			$params .= ' -v '.implode(' -v ', $e['volumes']);
 		}
-		if (!empty($e['environments'])) {
-			$params .= ' -e '.implode(' -e ', $e['environments']);
+		if (!empty($e['environment'])) {
+			$params .= ' -e '.implode(' -e ', $e['environment']);
 		}
 		if (!empty($e['entrypoint'])) {
 		    $params .= ' --entrypoint '.$e['entrypoint'];

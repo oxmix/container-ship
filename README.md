@@ -58,7 +58,7 @@ EOF
 curl -kX DELETE https://ctr-ship.example.host/deployment?name=my-project.test-deployment
 ```
 
-### Magic environments
+### Magic environment
 * update node
 ```yaml
 curl -kX POST https://127.0.0.1:8443/nodes/apply --data-binary @- << 'EOF'
@@ -81,7 +81,7 @@ containers:
     from: nginx
     ports:
       - 8081:80
-    environments:
+    environment:
       - PASS={PASS_SEC}
 EOF
 ```

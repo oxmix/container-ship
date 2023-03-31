@@ -57,7 +57,7 @@ func (d *Deployment) loadCargoDeployer() {
 				Volumes: []string{
 					"/var/run/docker.sock:/var/run/docker.sock:rw",
 				},
-				Environments: envs,
+				Environment: envs,
 			},
 		},
 	}
