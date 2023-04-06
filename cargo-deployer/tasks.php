@@ -135,11 +135,22 @@ class Tasks {
 				.'&stdout=true&stderr=true&timestamps=true');
 
 			foreach (explode(PHP_EOL, $logsText) as $str) {
-				if (!$time = substr($str, 8, 30))
+				if (!isset($str[0]))
 					continue;
+
+				$offset = 0;
+				$std = (int)bin2hex($str[0]);
+				// stdout || stderr
+				if ($std === 0x01 || $std === 0x02) {
+					$offset = 8;
+				}
+
+				if (!$time = substr($str, $offset, 30))
+					continue;
+
 				$logs[] = [
 					'time' => $time,
-					'mess' => substr($str, 8 + 31),
+					'mess' => substr($str, $offset + 31),
 				];
 			}
 			$this->sinceLogs[$e['Id']] = time();
