@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func Web(pool pool.Nodes) {
+func Web(pool pool.Worker) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !CheckRequest(w, r, pool) {
 			return
@@ -23,7 +23,7 @@ func Web(pool pool.Nodes) {
 	})
 }
 
-func CheckRequest(w http.ResponseWriter, r *http.Request, nodes pool.Nodes) bool {
+func CheckRequest(w http.ResponseWriter, r *http.Request, nodes pool.Worker) bool {
 	ip := u.GetIP(r)
 
 	if u.IPisLocal(ip) {

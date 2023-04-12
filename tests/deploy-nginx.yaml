@@ -1,7 +1,5 @@
 space: tests
 name: nginx-deployment
-nodes:
-  - "*"
 containers:
   - name: nginx1
     from: nginx

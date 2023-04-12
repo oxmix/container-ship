@@ -2,6 +2,7 @@ package pool
 
 import (
 	"ctr-ship/deployment"
+	u "ctr-ship/utils"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/fs"
@@ -9,17 +10,63 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
 )
 
+func loadingNodes(pool *NodesPool) error {
+	log.Println("loading nodes")
+
+	files, err := ioutil.ReadDir(pool.dirNodes)
+
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".yaml") {
+			continue
+		}
+
+		node, err := loadNode(f, pool.dirNodes)
+		if err != nil {
+			fmt.Println("failed read conf node:", f.Name(), "err:", err)
+			continue
+		}
+
+		name := u.Env().Namespace + "." + deployment.CargoDeploymentName
+		if !node.ExistsDeployment(name) {
+			node.Deployments = append(node.Deployments, name)
+		}
+
+		pool.nodes.Store(node.Name, node)
+	}
+
+	return err
+}
+
 type Node struct {
-	IPv4      string `yaml:"IPv4,omitempty"`
-	IPv6      string `yaml:"IPv6,omitempty"`
-	Name      string `yaml:"name"`
-	Variables []struct {
+	Location    string
+	IPv4        string   `yaml:"IPv4,omitempty"`
+	IPv6        string   `yaml:"IPv6,omitempty"`
+	Name        string   `yaml:"name"`
+	Deployments []string `yaml:"deployments"`
+	Variables   []struct {
 		Key string `yaml:"key"`
 		Val string `yaml:"val"`
 	}
+}
+
+func loadNode(f fs.FileInfo, dirNodes string) (*Node, error) {
+	location := dirNodes + "/" + f.Name()
+	buf, err := ioutil.ReadFile(location)
+	if err != nil {
+		return nil, err
+	}
+
+	node := new(Node)
+
+	err = yaml.Unmarshal(buf, node)
+	if err != nil {
+		return nil, fmt.Errorf("in file %q: %v", f.Name(), err)
+	}
+	node.Location = location
+
+	return node, nil
 }
 
 func (n Node) getIP() string {
@@ -34,96 +81,57 @@ func (n Node) getIP() string {
 	return ""
 }
 
-func NewNode(f fs.FileInfo, DirNodes string) (*Node, error) {
-	buf, err := ioutil.ReadFile(DirNodes + "/" + f.Name())
-	if err != nil {
-		return nil, err
-	}
-
-	n := new(Node)
-
-	err = yaml.Unmarshal(buf, n)
-	if err != nil {
-		return nil, fmt.Errorf("in file %q: %v", f.Name(), err)
-	}
-
-	return n, nil
-}
-
-func (p *NodesPool) AddNode(n *Node) error {
+func (n Node) Save(p Worker) error {
 	yamlData, err := yaml.Marshal(n)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(p.dirNodes+"/"+n.Name+".yaml", yamlData, 0644)
+	n.Location = p.GetDirNodes() + "/" + n.Name + ".yaml"
+
+	err = ioutil.WriteFile(n.Location, yamlData, 0644)
 	if err != nil {
 		return err
 	}
 
-	p.list.Store(n.Name, n)
+	name := u.Env().Namespace + "." + deployment.CargoDeploymentName
+	if !n.ExistsDeployment(name) {
+		n.Deployments = append(n.Deployments, name)
+	}
+
+	p.StoreNode(n.Name, &n)
 
 	return nil
 }
 
-func (p *NodesPool) DeleteNode(key string) error {
-	if n, ok := p.list.Load(key); ok {
-		nn := n.(*Node)
-
-		log.Printf("node %q destroy with all containers", nn.Name)
-
-		p.queueMu.Lock()
-		p.queue[nn.getIP()] = append(p.queue[nn.getIP()], deployment.Request{
-			Destroy: true,
-		})
-		p.queueMu.Unlock()
-
-		err := os.Remove(p.dirNodes + "/" + nn.Name + ".yaml")
-		if err != nil {
-			return err
-		}
-
-		go func(nodeName string) {
-			time.Sleep(20 * time.Second)
-			p.list.Delete(nodeName)
-			p.running.Delete(nodeName)
-		}(nn.Name)
-	} else {
-		return fmt.Errorf("not found node")
+func (n Node) Remove(name string, p Worker) error {
+	err := os.Remove(n.Location)
+	if err != nil {
+		return err
 	}
+
+	err = p.DeleteNode(name)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (p *NodesPool) loadingNodes() error {
-	log.Println("loading nodes")
-
-	files, err := ioutil.ReadDir(p.dirNodes)
-
-	for _, f := range files {
-		if !strings.HasSuffix(f.Name(), ".yaml") {
-			continue
+func (n Node) ExistsDeployment(name string) bool {
+	for _, n := range n.Deployments {
+		if n == name {
+			return true
 		}
-
-		node, err := NewNode(f, p.dirNodes)
-		if err != nil {
-			fmt.Println("failed read conf node:", f.Name(), "err:", err)
-			continue
-		}
-
-		p.list.Store(node.Name, node)
 	}
-
-	return err
+	return false
 }
 
-func (p *NodesPool) ExistIp(ip string) (exist bool) {
-	p.list.Range(func(key, val any) bool {
-		n := val.(*Node)
-		if ip == n.IPv4 || ip == n.IPv6 {
-			exist = true
-			return false
-		}
-		return true
-	})
-	return exist
+func (n Node) getSpaceDeployment() [][]string {
+	a := make([][]string, 0, len(n.Deployments))
+	for _, n := range n.Deployments {
+		a = append(a, strings.Split(n, "."))
+	}
+
+	return a
 }

@@ -13,6 +13,7 @@ new Tasks;
 
 class Tasks {
 	const EACH_ITER = 8;
+	const DEF_ENDPOINT = 'https://host.docker.internal:8443';
 	public int $iteration = 0;
 	public array $sinceLogs = [];
 
@@ -40,7 +41,7 @@ class Tasks {
 	}
 
 	public function endpoint(): string {
-		return $_SERVER['ENDPOINT'] ?? 'https://host.docker.internal:8443';
+		return $_SERVER['ENDPOINT'] ?? self::DEF_ENDPOINT;
 	}
 
 	public function namespaceShip(): string {
@@ -62,10 +63,13 @@ class Tasks {
 			'uptime'     => trim(shell_exec('uptime')),
 			'containers' => $this->containers()
 		]));
-		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+		if (self::endpoint() === self::DEF_ENDPOINT) {
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+		}
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 		$json = curl_exec($curl);
+		$error = curl_error($curl);
 		$code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 		$message = curl_error($curl);
 		curl_close($curl);
@@ -80,6 +84,7 @@ class Tasks {
 		}
 
 		if (empty($json)) {
+			error_log($error);
 			return [
 				'status'  => 'failed',
 				'code'    => $code,
@@ -243,7 +248,7 @@ class Tasks {
 		}
 
 		echo '• Container run: ';
-		echo shell_exec($this->containerCommand($dc, $d['deployment-name']).' 2>&1').PHP_EOL;
+		echo shell_exec($this->containerCommand($dc, $d['deploymentName']).' 2>&1').PHP_EOL;
 
 		if (!empty($oldId)) {
 			echo '• Container '.$dc['name'].'-old rm force: ';
@@ -283,27 +288,29 @@ class Tasks {
 		}
 
 		foreach ($data as $d) {
-			if ($d['self-upgrade']) {
+			if ($d['selfUpgrade']) {
 				$this->selfUpgrade($d);
 			}
 
-			if (($d['destroy'] ?? false) === true) {
+			if ($d['destroy'] === true && empty($d['deploymentName'])) {
 				$this->destroy();
 			}
 
 			echo '••••••••••'.PHP_EOL;
-			echo '• Execution deployment: '.$d['deployment-name'].PHP_EOL;
+			echo '• Execution deployment: '.$d['deploymentName'].PHP_EOL;
 
 			if (!isset($d['containers']))
 				$d['containers'] = [];
 
-			foreach ($d['containers'] as $e) {
-				echo '• Pulling "'.$e['from'].'": ';
-				echo shell_exec('docker pull '.$e['from']).PHP_EOL;
+			if ($d['destroy'] === false) {
+				foreach ($d['containers'] as $e) {
+					echo '• Pulling "'.$e['from'].'": ';
+					echo shell_exec('docker pull '.$e['from']).PHP_EOL;
+				}
 			}
 
 			$ids = str_replace(PHP_EOL, ' ',
-				shell_exec('docker ps -aqf "label='.$this->namespaceDeployment($d['deployment-name']).'"')
+				shell_exec('docker ps -aqf "label='.$this->namespaceDeployment($d['deploymentName']).'"')
 			);
 			if (!empty($ids)) {
 				$time = !empty($e['stop-time']) ? '--time '.(int)$e['stop-time'].' ' : '';
@@ -313,19 +320,21 @@ class Tasks {
 				echo shell_exec('docker rm '.$ids.' 2>&1').PHP_EOL;
 			}
 
-			foreach ($d['containers'] as $e) {
-				echo '• Container run "'.$e['name'].'": ';
-				echo shell_exec($this->containerCommand($e, $d['deployment-name']).' 2>&1').PHP_EOL;
+			if ($d['destroy'] === false) {
+				foreach ($d['containers'] as $e) {
+					echo '• Container run "'.$e['name'].'": ';
+					echo shell_exec($this->containerCommand($e, $d['deploymentName']).' 2>&1').PHP_EOL;
 
-				if (!empty($e['webhook'])) {
-					echo '• Webhook touch "'.$e['webhook'].'": ';
-					echo file_get_contents($e['webhook']).PHP_EOL;
-				}
+					if (!empty($e['webhook'])) {
+						echo '• Webhook touch "'.$e['webhook'].'": ';
+						echo file_get_contents($e['webhook']).PHP_EOL;
+					}
 
-				if (!empty($e['executions'])) {
-					echo '• Executions in container'.PHP_EOL;
-					foreach ($e['executions'] as $x) {
-						echo shell_exec('docker exec '.$e['name'].' '.$x);
+					if (!empty($e['executions'])) {
+						echo '• Executions in container'.PHP_EOL;
+						foreach ($e['executions'] as $x) {
+							echo shell_exec('docker exec '.$e['name'].' '.$x);
+						}
 					}
 				}
 			}

@@ -1,7 +1,5 @@
 space: tests
 name: dante-deployment
-nodes:
-  - localhost
 containers:
   - name: dante
     from: vimagick/dante

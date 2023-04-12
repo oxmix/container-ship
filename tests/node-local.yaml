@@ -1,5 +1,8 @@
 IPv4: 127.0.0.1
 name: localhost
+deployments:
+  - tests.nginx-deployment
+  - tests.dante-deployment
 variables:
   - key: TEXT_KEY
     val: key-32167

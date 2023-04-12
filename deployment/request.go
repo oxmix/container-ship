@@ -1,8 +1,8 @@
 package deployment
 
 type Request struct {
-	SelfUpgrade    bool        `json:"self-upgrade"`
+	SelfUpgrade    bool        `json:"selfUpgrade"`
 	Destroy        bool        `json:"destroy"`
-	DeploymentName string      `json:"deployment-name"`
+	DeploymentName string      `json:"deploymentName"`
 	Containers     []Container `json:"containers"`
 }

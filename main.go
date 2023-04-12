@@ -1,17 +1,11 @@
 package main
 
 import (
-	"ctr-ship/deployment"
 	"ctr-ship/points"
 	"ctr-ship/pool"
 	u "ctr-ship/utils"
 	"log"
 	"net/http"
-)
-
-const (
-	DirManifests = "./assets/manifests"
-	DirNodes     = "./assets/nodes"
 )
 
 func main() {
@@ -25,38 +19,47 @@ func main() {
 
 	u.SignalHandler()
 
-	err := deployment.NewDeployment(DirManifests)
-	if err != nil {
-		log.Fatal("failed new deployment, err:", err)
-		return
-	}
+	var worker pool.Worker = pool.NewWorkerPool(
+		"./assets/manifests",
+		"./assets/nodes",
+	)
 
-	var nodes pool.Nodes = pool.NewPoolNodes(DirNodes)
-
-	points.Web(nodes)
-	points.States(nodes)
-	points.Connection(nodes)
-	points.CargoDeployer(nodes)
-	points.Deployment(nodes)
-	points.Nodes(nodes)
-	points.AllowRequest(nodes)
-	points.Logs(nodes)
+	points.Web(worker)
+	points.States(worker)
+	points.Connection(worker)
+	points.CargoDeployer(worker)
+	points.Deployment(worker)
+	points.Nodes(worker)
+	points.AllowRequest(worker)
+	points.Logs(worker)
 
 	log.Println("handlers is setup")
 
-	tslConfig, err := u.CertSelf()
+	// https
+	go func() {
+		log.Printf("up https://localhost:8443")
+		tslConfig, err := u.CertSelf()
+		if err != nil {
+			log.Fatalln("fatal generate self cert:", err)
+			return
+		}
+		s := &http.Server{
+			Addr:      ":8443",
+			Handler:   nil,
+			TLSConfig: tslConfig,
+		}
+		err = s.ListenAndServeTLS("", "")
+		if err != nil {
+			log.Fatalln("fatal listen serve, addr:", ":8443", err)
+			return
+		}
+	}()
+
+	// http
+	log.Printf("up http://localhost:8080")
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Fatalln("fatal generate self cert:", err)
-		return
-	}
-	s := &http.Server{
-		Addr:      ":8443",
-		Handler:   nil,
-		TLSConfig: tslConfig,
-	}
-	err = s.ListenAndServeTLS("", "")
-	if err != nil {
-		log.Fatalln("fatal listen serve, addr:", ":8443", err)
+		log.Fatalln("fatal listen serve, addr:", ":8080", err)
 		return
 	}
 }

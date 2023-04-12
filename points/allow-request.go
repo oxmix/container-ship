@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func AllowRequest(pool pool.Nodes) {
+func AllowRequest(pool pool.Worker) {
 	http.HandleFunc("/allowRequest", func(w http.ResponseWriter, r *http.Request) {
 
 		xip := r.Header.Get("X-Check-IP")

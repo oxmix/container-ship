@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func Logs(nodes pool.Nodes) {
+func Logs(nodes pool.Worker) {
 	http.HandleFunc("/logs", func(w http.ResponseWriter, r *http.Request) {
 		if !CheckRequest(w, r, nodes) {
 			return

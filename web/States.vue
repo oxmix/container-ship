@@ -2,8 +2,8 @@
   <fieldset v-for="namespace in Object.keys(states)" :key="namespace" class="deployments">
     <legend>{{ namespace }}<span>namespace</span></legend>
 
-    <fieldset v-for="d in states[namespace]" :key="d.space+d.name">
-      <legend>{{ d.name }}<span>manifest</span></legend>
+    <fieldset v-for="manifest in Object.keys(states[namespace])" :key="namespace+manifest">
+      <legend>{{ manifest }}<span>manifest</span></legend>
       <table>
         <thead>
           <tr>
@@ -13,14 +13,14 @@
           </tr>
         </thead>
         <tbody>
-          <slot v-for="host in Object.keys(d.nodes)" :key="d.space+d.name+host">
+          <slot v-for="(nodes, host) in states[namespace][manifest]" :key="namespace+manifest+host">
             <tr
-              v-for="n in d.nodes[host]"
-              :key="d.space+d.name+host+n.name"
-              @click="$router.push('/logs/'+host+'/'+d.space+'.'+n.name);"
+              v-for="n in nodes"
+              :key="namespace+manifest+host+n.name"
+              @click="$router.push('/logs/'+host+'/'+namespace+'.'+n.name)"
             >
               <td>
-                <router-link :to="'/logs/'+host+'/'+d.space+'.'+n.name">
+                <router-link :to="'/logs/'+host+'/'+namespace+'.'+n.name">
                   {{ n.name }}
                 </router-link>
               </td>
@@ -28,7 +28,7 @@
                 <span :class="'label '+n.state">{{ n.status.toLowerCase() }}</span>
               </td>
               <td>
-                <span :class="'label ' + (n.nodeLive > 20 ? 'wrong' : 'running')">
+                <span v-show="n.nodeLive !== -999" :class="'label ' + (n.nodeLive > 20 ? 'wrong' : 'running')">
                   {{ host }}: {{ n.nodeLive }} sec.
                 </span>
               </td>

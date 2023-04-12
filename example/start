@@ -24,6 +24,9 @@ echo 'Add machine to nodes'
 curl -kX POST https://127.0.0.1:8443/nodes/apply --data-binary @- << 'EOF'
 IPv4: 172.17.0.1
 name: localhost
+deployments:
+  - ctr-ship.registry-deployment
+  - my-project.redis-deployment
 EOF
 
 echo 'Connect machine, installing cargo-deployer'
@@ -33,8 +36,6 @@ echo 'Add manifest docker registry'
 curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << EOF
 space: ctr-ship
 name: registry-deployment
-nodes:
-  - localhost
 containers:
   - name: registry
     from: registry:2
@@ -56,14 +57,10 @@ echo 'Add manifest example redis'
 curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << 'EOF'
 space: my-project
 name: redis-deployment
-nodes:
-  - localhost
 containers:
   - name: redis
-    from: redis:latest
-    volumes:
-      - /tmp/redis-data:/data
-    entrypoint: redis-server --save "" --appendonly no
+    from: redis:6-alpine
+    command: redis-server --save "" --appendonly no
 EOF
 
 echo '----------'

@@ -77,7 +77,7 @@ func TestFailed(t *testing.T) {
 
 func TestCheckRequest(t *testing.T) {
 	w := httptest.NewRecorder()
-	pn := pool.NewPoolNodes(t.TempDir())
+	pn := pool.NewWorkerPool(t.TempDir(), t.TempDir())
 
 	if !CheckRequest(w, &http.Request{RemoteAddr: "127.0.0.1:1234"}, pn) {
 		t.Error("CheckRequest expected", true, "got", false)

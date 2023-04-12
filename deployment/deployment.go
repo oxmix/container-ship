@@ -14,19 +14,17 @@ import (
 
 const CargoDeploymentName = "cargo-deployer-deployment"
 
-var Single *Deployment
+func NewDeployment(dirManifests string) (*Deployment, error) {
+	deployment := new(Deployment)
+	deployment.dirManifests = dirManifests
 
-func NewDeployment(dirManifests string) error {
-	Single = new(Deployment)
-	Single.dirManifests = dirManifests
-
-	err := Single.LoadingManifests()
+	err := deployment.LoadingManifests()
 
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return nil
+	return deployment, nil
 }
 
 type Deployment struct {
@@ -47,13 +45,11 @@ func (d *Deployment) loadCargoDeployer() {
 	dc := Manifest{
 		Space: u.Env().Namespace,
 		Name:  CargoDeploymentName,
-		Nodes: []string{"*"},
 		Containers: []Container{
 			{
 				Name:    "cargo-deployer",
 				From:    "oxmix/cargo-deployer:" + u.Env().CargoVersion,
 				Restart: "always",
-				LogOpt:  "max-size=5m",
 				Volumes: []string{
 					"/var/run/docker.sock:/var/run/docker.sock:rw",
 				},
@@ -168,31 +164,4 @@ func (d *Deployment) DeleteManifest(key string) (Manifest, error) {
 		return dm, nil
 	}
 	return Manifest{}, fmt.Errorf("not found manifest")
-}
-
-func (d *Deployment) DiffNodes(mn Manifest) [][]string {
-	r := make([][]string, 2)
-	if ml, ok := d.Manifests.Load(mn.GetDeploymentName()); ok {
-		m := ml.(Manifest)
-
-		r[0] = d.diff(m.Nodes, mn.Nodes)
-		r[1] = d.diff(mn.Nodes, m.Nodes)
-	}
-
-	return r
-}
-
-func (d *Deployment) diff(a, b []string) (diff []string) {
-	mb := make(map[string]struct{}, len(a))
-	for _, x := range a {
-		mb[x] = struct{}{}
-	}
-
-	for _, x := range b {
-		if _, found := mb[x]; !found {
-			diff = append(diff, x)
-		}
-	}
-
-	return diff
 }

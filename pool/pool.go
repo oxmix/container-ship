@@ -19,35 +19,29 @@ import (
 
 const logStorageLimit = 1024
 
-func NewPoolNodes(dirNodes string) *NodesPool {
-	np := &NodesPool{
-		dirNodes:      dirNodes,
-		list:          &sync.Map{},
-		queue:         map[string][]deployment.Request{},
-		queueMu:       sync.Mutex{},
-		aliveDelays:   &sync.Map{},
-		pool:          make(chan Running),
-		running:       &sync.Map{},
-		logsMu:        sync.Mutex{},
-		logsStorage:   map[string][]logsLine{},
-		logsAlertSent: sync.Map{},
-	}
-
-	err := np.loadingNodes()
-	if err != nil {
-		log.Fatal("failed loading nodes:", err)
-	}
-	np.handlerAlive()
-
-	return np
+type Worker interface {
+	GetDeployment() *deployment.Deployment
+	GetDirNodes() string
+	StoreNode(name string, node *Node)
+	DeleteNode(key string) error
+	ExistIp(ip string) (exist bool)
+	AddQueue(manifest deployment.Manifest, destroy bool, selectNode string) error
+	GetQueue(ip string) []byte
+	States() map[string]map[string]map[string][]statesContainers
+	UpgradeCargo() error
+	Receiver(ip string, body []byte) error
+	NodesStats() (ns []NodeStats)
+	GetNodes(manifest deployment.Manifest) (r []string)
+	GetLogs(node string, container string, since time.Time) ([]logsLine, error)
 }
 
 type NodesPool struct {
+	nodes         *sync.Map
 	dirNodes      string
-	list          *sync.Map
+	deployment    *deployment.Deployment
 	queue         map[string][]deployment.Request
 	queueMu       sync.Mutex
-	aliveDelays   *sync.Map
+	delays        *sync.Map
 	pool          chan Running
 	running       *sync.Map
 	logsMu        sync.Mutex
@@ -55,18 +49,81 @@ type NodesPool struct {
 	logsAlertSent sync.Map
 }
 
-type Nodes interface {
-	AddNode(n *Node) error
-	DeleteNode(key string) error
-	ExistIp(ip string) (exist bool)
-	AddQueue(manifest deployment.Manifest) error
-	GetQueue(ip string) []byte
-	Working(f func(nr Running))
-	UpgradeCargo() error
-	Receiver(ip string, body []byte) error
-	NodesStats() (ns []NodeStats)
-	GetNodes() (r []string)
-	GetLogs(node string, container string, since time.Time) ([]logsLine, error)
+func NewWorkerPool(dirManifests string, dirNodes string) *NodesPool {
+	deploy, err := deployment.NewDeployment(dirManifests)
+	if err != nil {
+		log.Fatal("failed new deployment, err: ", err)
+	}
+
+	np := &NodesPool{
+		deployment:    deploy,
+		dirNodes:      dirNodes,
+		nodes:         &sync.Map{},
+		queue:         map[string][]deployment.Request{},
+		queueMu:       sync.Mutex{},
+		delays:        &sync.Map{},
+		pool:          make(chan Running),
+		running:       &sync.Map{},
+		logsMu:        sync.Mutex{},
+		logsStorage:   map[string][]logsLine{},
+		logsAlertSent: sync.Map{},
+	}
+
+	err = loadingNodes(np)
+	if err != nil {
+		log.Fatal("failed loading nodes: ", err)
+	}
+
+	go np.handlerStates()
+
+	return np
+}
+
+func (p *NodesPool) GetDeployment() *deployment.Deployment {
+	return p.deployment
+}
+
+func (p *NodesPool) GetDirNodes() string {
+	return p.dirNodes
+}
+
+func (p *NodesPool) StoreNode(name string, node *Node) {
+	p.nodes.Store(name, node)
+}
+
+func (p *NodesPool) DeleteNode(key string) error {
+	if n, ok := p.nodes.Load(key); ok {
+		nn := n.(*Node)
+
+		log.Printf("node %q destroy with all containers", nn.Name)
+
+		p.queueMu.Lock()
+		p.queue[nn.getIP()] = append(p.queue[nn.getIP()], deployment.Request{
+			Destroy: true,
+		})
+		p.queueMu.Unlock()
+
+		go func(nodeName string) {
+			time.Sleep(20 * time.Second)
+			p.nodes.Delete(nodeName)
+			p.running.Delete(nodeName)
+		}(nn.Name)
+	} else {
+		return fmt.Errorf("not found node")
+	}
+	return nil
+}
+
+func (p *NodesPool) ExistIp(ip string) (exist bool) {
+	p.nodes.Range(func(key, val any) bool {
+		n := val.(*Node)
+		if ip == n.IPv4 || ip == n.IPv6 {
+			exist = true
+			return false
+		}
+		return true
+	})
+	return exist
 }
 
 func (p *NodesPool) NodesStats() (ns []NodeStats) {
@@ -112,59 +169,106 @@ func (p *NodesPool) Receiver(ip string, body []byte) error {
 	return nil
 }
 
-func (p *NodesPool) handlerAlive() {
-	go func() {
-		for pp := range p.pool {
-			p.running.Store(pp.NodeName, pp)
-			for _, cont := range pp.Containers {
-				p.logsParsing(pp.NodeName, cont.Name, cont.Logs)
-			}
+func (p *NodesPool) containersOfNode(nodeName string) map[string]deployment.Manifest {
+	containersOfNode := map[string]deployment.Manifest{}
+	if val, ok := p.nodes.Load(nodeName); ok {
+		node := val.(*Node)
 
-			deployment.Single.Manifests.Range(func(key, val any) bool {
-				dm := val.(deployment.Manifest)
-
-				if !dm.ExistNode(pp.NodeName) {
-					return true
-				}
-
-				if time.Now().Unix()-dm.LastModify < 30 {
-					return true
-				}
-
-				// check and to start
+		for _, deployName := range node.Deployments {
+			if gdm, ok := p.deployment.Manifests.Load(deployName); ok {
+				dm := gdm.(deployment.Manifest)
 				for _, c := range dm.Containers {
-					name := dm.GetContainerName(c.Name)
-					if pp.existContainer(name) {
+					containersOfNode[dm.GetContainerName(c.Name)] = dm
+				}
+			}
+		}
+	}
+
+	return containersOfNode
+}
+
+func (p *NodesPool) handlerStates() {
+	for pp := range p.pool {
+
+		p.running.Store(pp.NodeName, pp)
+
+		containersOfNode := p.containersOfNode(pp.NodeName)
+
+		// checking to destroy
+		for _, cont := range pp.Containers {
+			p.logsParsing(pp.NodeName, cont.Name, cont.Logs)
+
+			if dm, ok := containersOfNode[cont.Name]; !ok {
+
+				found := false
+				p.deployment.Manifests.Range(func(_, val any) bool {
+					dmr := val.(deployment.Manifest)
+					if dmr.ExistsContainer(cont.Name) {
+						dm = dmr
+						found = true
+						return false
+					}
+					return true
+				})
+				if !found {
+					log.Printf("trigger destroy, not found manifest, container: %q, node: %q",
+						cont.Name, pp.NodeName)
+					continue
+				}
+
+				delayKey := pp.NodeName + "-destroy-" + dm.GetDeploymentName()
+				if dls, ok := p.delays.Load(delayKey); ok {
+					t := dls.(time.Time)
+					if time.Now().Sub(t).Seconds() < 60 {
+						log.Printf(
+							"trigger destroy, waiting, container: %q, node: %q, delay: 60 sec, past: %f",
+							cont.Name, pp.NodeName, time.Now().Sub(t).Seconds())
 						continue
 					}
-
-					delayKey := pp.NodeName + "-" + name
-					if dls, ok := p.aliveDelays.Load(delayKey); ok {
-						t := dls.(time.Time)
-						if time.Now().Sub(t).Seconds() < 60 {
-							log.Printf(
-								"trigger alive, waiting, container: %q, node: %q, delay: 60 sec, past: %f",
-								name, pp.NodeName, time.Now().Sub(t).Seconds())
-							return true
-						}
-					}
-					p.aliveDelays.Store(delayKey, time.Now())
-
-					// set node
-					dm.Nodes = []string{pp.NodeName}
-
-					log.Printf("trigger alive, lost container: %q, node: %q", name, pp.NodeName)
-					err := p.AddQueue(dm)
-					if err != nil {
-						log.Println("failed add queue, err:", err)
-					}
-					return true
-
 				}
-				return true
-			})
+				p.delays.Store(delayKey, time.Now())
+
+				log.Printf("trigger destroy, container: %q, node: %q", cont.Name, pp.NodeName)
+				err := p.AddQueue(dm, true, pp.NodeName)
+				if err != nil {
+					log.Println("failed add queue, err:", err)
+				}
+			}
 		}
-	}()
+
+		// checking for alive
+		for containerName, dm := range containersOfNode {
+			exists := false
+			for _, cont := range pp.Containers {
+				if cont.Name == containerName {
+					exists = true
+					break
+				}
+			}
+
+			if exists {
+				continue
+			}
+
+			delayKey := pp.NodeName + "-alive-" + dm.GetDeploymentName()
+			if dls, ok := p.delays.Load(delayKey); ok {
+				t := dls.(time.Time)
+				if time.Now().Sub(t).Seconds() < 60 {
+					log.Printf(
+						"trigger alive, waiting, container: %q, node: %q, delay: 60 sec, past: %f",
+						containerName, pp.NodeName, time.Now().Sub(t).Seconds())
+					continue
+				}
+			}
+			p.delays.Store(delayKey, time.Now())
+
+			log.Printf("trigger alive, lost container: %q, node: %q", containerName, pp.NodeName)
+			err := p.AddQueue(dm, false, pp.NodeName)
+			if err != nil {
+				log.Println("failed add queue, err:", err)
+			}
+		}
+	}
 }
 
 func (p *NodesPool) GetQueue(ip string) []byte {
@@ -186,51 +290,53 @@ func (p *NodesPool) GetQueue(ip string) []byte {
 	return marshal
 }
 
-func (p *NodesPool) AddQueue(dm deployment.Manifest) error {
-	if len(dm.Nodes) == 0 {
-		return fmt.Errorf("not found nodes in manifest")
+func (p *NodesPool) addQueueList(dm deployment.Manifest, destroy bool, node *Node) {
+	containers := p.magicEnvs(dm.Containers, node)
+	for k := range containers {
+		containers[k].NameUnique = dm.GetContainerNameRand(containers[k].Name)
+		containers[k].Name = dm.GetContainerName(containers[k].Name)
 	}
 
+	p.queueMu.Lock()
+	p.queue[node.getIP()] = append(p.queue[node.getIP()], deployment.Request{
+		SelfUpgrade:    dm.IsSelfUpgrade(),
+		DeploymentName: dm.GetDeploymentName(),
+		Containers:     containers,
+		Destroy:        destroy,
+	})
+	p.queueMu.Unlock()
+
+	log.Printf("added to queue, deployment: %q node: %q destroy: %v",
+		dm.GetDeploymentName(), node.Name, destroy)
+}
+
+func (p *NodesPool) AddQueue(dm deployment.Manifest, destroy bool, selectNode string) error {
 	var added int
-	var add = func(nc *Node) {
-		added++
-		containers := p.magicEnvs(dm.Containers, nc)
-		for k := range containers {
-			containers[k].NameUnique = dm.GetContainerNameRand(containers[k].Name)
-			containers[k].Name = dm.GetContainerName(containers[k].Name)
-		}
-		p.queueMu.Lock()
-		p.queue[nc.getIP()] = append(p.queue[nc.getIP()], deployment.Request{
-			SelfUpgrade:    dm.GetDeploymentName() == u.Env().Namespace+"."+deployment.CargoDeploymentName,
-			DeploymentName: dm.GetDeploymentName(),
-			Containers:     containers,
-		})
-		if len(containers) > 0 {
-			log.Printf("deployment %q added to queue for node %q containers: %d",
-				dm.GetDeploymentName(), nc.Name, len(containers))
-		} else {
-			log.Printf("deployment %q added to queue for node %q signal to destroy containers",
-				dm.GetDeploymentName(), nc.Name)
-		}
-		p.queueMu.Unlock()
-	}
 
-	for _, node := range dm.Nodes {
-		p.list.Range(func(key, val any) bool {
+	if selectNode == "all" {
+		p.nodes.Range(func(key, val any) bool {
 			nc := val.(*Node)
 
-			if node == "*" {
-				add(nc)
-				return true
-			}
+			for _, deployName := range nc.Deployments {
+				if deployName != dm.GetDeploymentName() {
+					continue
+				}
 
-			if node == nc.Name {
-				add(nc)
+				added++
+
+				p.addQueueList(dm, destroy, nc)
+
 				return false
 			}
 
 			return true
 		})
+	} else {
+		if val, ok := p.nodes.Load(selectNode); ok {
+			nc := val.(*Node)
+			added++
+			p.addQueueList(dm, destroy, nc)
+		}
 	}
 
 	if added == 0 {
@@ -242,8 +348,8 @@ func (p *NodesPool) AddQueue(dm deployment.Manifest) error {
 }
 
 func (p *NodesPool) UpgradeCargo() error {
-	if dm, ok := deployment.Single.Manifests.Load(u.Env().Namespace + "." + deployment.CargoDeploymentName); ok {
-		err := p.AddQueue(dm.(deployment.Manifest))
+	if dm, ok := p.deployment.Manifests.Load(u.Env().Namespace + "." + deployment.CargoDeploymentName); ok {
+		err := p.AddQueue(dm.(deployment.Manifest), false, "all")
 		if err != nil {
 			return err
 		}
@@ -254,10 +360,14 @@ func (p *NodesPool) UpgradeCargo() error {
 	return nil
 }
 
-func (p *NodesPool) GetNodes() (r []string) {
-	p.list.Range(func(key, val any) bool {
+func (p *NodesPool) GetNodes(manifest deployment.Manifest) (r []string) {
+	p.nodes.Range(func(key, val any) bool {
 		n := val.(*Node)
-		r = append(r, n.Name)
+		for _, deployName := range n.Deployments {
+			if deployName == manifest.GetDeploymentName() {
+				r = append(r, n.Name)
+			}
+		}
 		return true
 	})
 
@@ -280,7 +390,7 @@ func (p *NodesPool) magicEnvs(dcs []deployment.Container, nc *Node) (ndc []deplo
 }
 
 func (p *NodesPool) getNameByIP(ip string) (name string) {
-	p.list.Range(func(key, val any) bool {
+	p.nodes.Range(func(key, val any) bool {
 		nc := val.(*Node)
 		if nc.IPv4 == ip || nc.IPv6 == ip {
 			name = nc.Name
@@ -319,7 +429,7 @@ func (p *NodesPool) logsAlert(node string, container string, l logsLine) {
 			}
 			p.logsAlertSent.Store(hash, struct{}{})
 			go p.logsSendNotify(fmt.Sprintf(
-				"❗️️Container Ship Logs Alert\n\nNode: %s\nContainer: %s\nTime: %s"+
+				"Node: %s\nContainer: %s\n\nTime: %s"+
 					"\nLink: https://"+u.Env().Endpoint+"/logs/"+node+"/"+container+"\n\nMessage:\n%s",
 				node, container, l.Time, l.Mess))
 			return

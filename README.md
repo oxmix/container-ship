@@ -16,35 +16,19 @@ Deployment of containers type master-workers fits for multiple regions, minimum 
 
 ## Mini Wiki
 
-### Add node to a ship
-```yaml
-curl -kX POST https://ctr-ship.example.host/nodes/apply --data-binary @- << 'EOF'
-IPv4: 127.0.0.1
-name: localhost
-EOF
-```
-
 ### Connect machine, will be install `cargo-deployer`
 * Execute on the worker node
 ```shell
-curl -sk https://ctr-ship.example.host/connection | sudo bash -
-```
-
-### Delete node
-* All containers will be destroyed and `cargo-deployer` too
-```shell
-curl -kX DELETE https://ctr-ship.example.host/nodes/apply?name=localhost
+curl -sk https://ctr-ship.domain.tld/connection | sudo bash -
 ```
 
 ### Apply deployment manifest
 ```yaml
-curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << 'EOF'
+curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary @- << 'EOF'
 space: my-project
 name: test-deployment
-nodes:
-  - localhost
 containers:
-  - name: nginx
+  - name: test-nginx
     from: nginx
     stop-time: 30
     ports:
@@ -52,18 +36,36 @@ containers:
 EOF
 ```
 
+### Add/update node to a ship
+```yaml
+curl -kX POST https://ctr-ship.domain.tld/nodes/apply --data-binary @- << 'EOF'
+IPv4: 127.0.0.1
+name: localhost
+deployments:
+  - my-project.test-deployment
+EOF
+```
+
+### Delete node
+* All containers will be destroyed and `cargo-deployer` too
+```shell
+curl -kX DELETE https://ctr-ship.domain.tld/nodes/apply?name=localhost
+```
+
 ### Delete manifest deployment
 * All containers of manifest will be destroyed
 ```shell
-curl -kX DELETE https://ctr-ship.example.host/deployment?name=my-project.test-deployment
+curl -kX DELETE https://ctr-ship.domain.tld/deployment?name=my-project.test-deployment
 ```
 
 ### Magic environment
 * update node
 ```yaml
-curl -kX POST https://127.0.0.1:8443/nodes/apply --data-binary @- << 'EOF'
+curl -kX POST https://ctr-ship.domain.tld/nodes/apply --data-binary @- << 'EOF'
 IPv4: 127.0.0.1
 name: localhost
+deployments: 
+  - my-project.test-nginx
 variables:
   - key: PASS_SEC
     val: 32167
@@ -71,11 +73,9 @@ EOF
 ```
 * auto replace in each manifest deployment if set equal node and variables {}
 ```yaml
-curl -kX POST https://127.0.0.1:8443/deployment --data-binary @- << 'EOF'
+curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary @- << 'EOF'
 space: example
 name: magick-envs-deployment
-nodes:
-  - localhost
 containers:
   - name: nginx
     from: nginx
@@ -125,7 +125,12 @@ oxmix/container-ship
 
 ### Deployment through file
 ```shell
-curl -kX POST https://127.0.0.1:8443/deployment --data-binary "@test-deployment.yaml"
+curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary "@test-deployment.yaml"
+```
+
+### Update node through file
+```shell
+curl -kX POST https://ctr-ship.domain.tld/nodes/apply --data-binary "@localhost.yaml"
 ```
 
 ### Tab `Nodes`

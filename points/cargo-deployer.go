@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func CargoDeployer(pool pool.Nodes) {
+func CargoDeployer(pool pool.Worker) {
 	http.HandleFunc("/deployment/cargo-deployer", func(w http.ResponseWriter, r *http.Request) {
 		if !CheckRequest(w, r, pool) {
 			return

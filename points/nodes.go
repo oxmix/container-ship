@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func Nodes(nodes pool.Nodes) {
+func Nodes(nodes pool.Worker) {
 	http.HandleFunc("/nodes", func(w http.ResponseWriter, r *http.Request) {
 		if !CheckRequest(w, r, nodes) {
 			return
@@ -101,7 +101,7 @@ func Nodes(nodes pool.Nodes) {
 			return
 		}
 
-		err = nodes.AddNode(n)
+		err = n.Save(nodes)
 		if err != nil {
 			mess := "failed save node: " + err.Error()
 			log.Println(mess)

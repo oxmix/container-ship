@@ -3,7 +3,6 @@ WORKDIR /build
 COPY ./web .
 RUN npm i
 RUN npm run build:production
-RUN ls -la
 
 FROM golang:1.18-buster as app
 WORKDIR /app

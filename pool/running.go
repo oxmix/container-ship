@@ -1,6 +1,8 @@
 package pool
 
-import "time"
+import (
+	"time"
+)
 
 type Running struct {
 	IP         string
@@ -40,11 +42,4 @@ func (nr Running) existContainer(name string) bool {
 		}
 	}
 	return false
-}
-
-func (p *NodesPool) Working(f func(nr Running)) {
-	p.running.Range(func(_, val any) bool {
-		f(val.(Running))
-		return true
-	})
 }

@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	u "ctr-ship/utils"
 	"encoding/hex"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -9,10 +10,9 @@ import (
 )
 
 type Manifest struct {
-	LastModify int64    `yaml:"last-modify"`
-	Space      string   `yaml:"space"`
-	Name       string   `yaml:"name"`
-	Nodes      []string `yaml:"nodes"`
+	LastModify int64  `yaml:"last-modify"`
+	Space      string `yaml:"space"`
+	Name       string `yaml:"name"`
 	Containers []Container
 }
 
@@ -27,7 +27,6 @@ type Container struct {
 	Privileged  bool     `yaml:"privileged,omitempty" json:"privileged"`
 	Network     string   `yaml:"network,omitempty" json:"network"`
 	Restart     string   `yaml:"restart,omitempty" json:"restart"`
-	LogOpt      string   `yaml:"log-opt,omitempty" json:"log-opt"`
 	Caps        []string `yaml:"caps,omitempty" json:"caps"`
 	Hosts       []string `yaml:"hosts,omitempty" json:"hosts"`
 	Ports       []string `yaml:"ports,omitempty" json:"ports"`
@@ -59,12 +58,9 @@ func (m Manifest) Save(dirManifests string) error {
 	return nil
 }
 
-func (m Manifest) ExistNode(name string) bool {
-	if len(m.Nodes) > 0 && m.Nodes[0] == "*" {
-		return true
-	}
-	for _, n := range m.Nodes {
-		if n == name {
+func (m Manifest) ExistsContainer(name string) bool {
+	for _, n := range m.Containers {
+		if m.GetContainerName(n.Name) == name {
 			return true
 		}
 	}
@@ -83,4 +79,8 @@ func (m Manifest) GetContainerNameRand(name string) string {
 	token := make([]byte, 3)
 	rand.Read(token)
 	return m.Space + "." + name + "-" + hex.EncodeToString(token)
+}
+
+func (m Manifest) IsSelfUpgrade() bool {
+	return m.GetDeploymentName() == u.Env().Namespace+"."+CargoDeploymentName
 }

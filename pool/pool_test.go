@@ -7,27 +7,27 @@ import (
 	"testing"
 )
 
-var pool Nodes
+var pool Worker
 
-func TestAddNode(t *testing.T) {
-	err := deployment.NewDeployment(t.TempDir())
-	if err != nil {
-		t.Error(err)
-		return
-	}
+func TestSaveNode(t *testing.T) {
+	dirNodes := t.TempDir()
+	pool = NewWorkerPool(t.TempDir(), dirNodes)
 
-	pool = NewPoolNodes(t.TempDir())
-
-	err = pool.AddNode(&Node{
+	n := &Node{
 		Name: "localhost",
 		IPv4: "127.0.0.1",
+		Deployments: []string{
+			"ctr-ship.test-deployment",
+		},
 		Variables: []struct {
 			Key string `yaml:"key"`
 			Val string `yaml:"val"`
 		}{
 			{Key: "MAGICAL_ENV", Val: "--secret--"},
 		},
-	})
+	}
+
+	err := n.Save(pool)
 	if err != nil {
 		t.Error(err)
 	}
@@ -53,11 +53,10 @@ func TestUpgradeCargo(t *testing.T) {
 func TestAddQueueCaseDestroy(t *testing.T) {
 	manifest := deployment.Manifest{
 		Space: u.Env().Namespace,
-		Name:  "test-deployment-destroy",
-		Nodes: []string{"*"},
+		Name:  "test-deployment",
 	}
 
-	err := pool.AddQueue(manifest)
+	err := pool.AddQueue(manifest, true, "all")
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,8 +65,7 @@ func TestAddQueueCaseDestroy(t *testing.T) {
 func TestAddQueueCaseRun(t *testing.T) {
 	manifest := deployment.Manifest{
 		Space: u.Env().Namespace,
-		Name:  "test-deployment-run",
-		Nodes: []string{"*"},
+		Name:  "test-deployment",
 		Containers: []deployment.Container{
 			{
 				Name: "test",
@@ -79,7 +77,7 @@ func TestAddQueueCaseRun(t *testing.T) {
 		},
 	}
 
-	err := pool.AddQueue(manifest)
+	err := pool.AddQueue(manifest, false, "all")
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,7 +94,7 @@ func TestGetQueue(t *testing.T) {
 
 	one := (*r)[0]
 	if !one.SelfUpgrade {
-		t.Error("SelfUpgrade expected", true, "got", false)
+		t.Fatal("SelfUpgrade expected", true, "got", false)
 	}
 	expected := u.Env().Namespace + ".cargo-deployer-deployment"
 	if one.DeploymentName != expected {
@@ -109,7 +107,7 @@ func TestGetQueue(t *testing.T) {
 	if two.SelfUpgrade {
 		t.Error("SelfUpgrade expected", false, "got", true)
 	}
-	expected = u.Env().Namespace + ".test-deployment-destroy"
+	expected = u.Env().Namespace + ".test-deployment"
 	if two.DeploymentName != expected {
 		t.Error("DeploymentName",
 			"expected", expected,
@@ -120,7 +118,7 @@ func TestGetQueue(t *testing.T) {
 	if three.SelfUpgrade {
 		t.Error("SelfUpgrade expected", false, "got", true)
 	}
-	expected = u.Env().Namespace + ".test-deployment-run"
+	expected = u.Env().Namespace + ".test-deployment"
 	if three.DeploymentName != expected {
 		t.Error("DeploymentName",
 			"expected", expected,
