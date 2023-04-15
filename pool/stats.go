@@ -75,11 +75,6 @@ func (p *NodesPool) States() map[string]map[string]map[string][]statesContainers
 					}
 				}
 			}
-
-			//
-			//sort.SliceStable(out[spaceName][deployName], func(i, j int) bool {
-			//	return out[spaceName][deployName][i].Name < out[spaceName][deployName][j].Name
-			//})
 		}
 
 		return true

@@ -325,8 +325,6 @@ func (p *NodesPool) AddQueue(dm deployment.Manifest, destroy bool, selectNode st
 				added++
 
 				p.addQueueList(dm, destroy, nc)
-
-				return false
 			}
 
 			return true
