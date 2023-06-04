@@ -272,6 +272,9 @@ class Tasks {
 			echo '• Containers destroy: ';
 			echo shell_exec('docker rm -f '.$ids.' 2>&1').PHP_EOL;
 
+			echo '• Images prune: ';
+			echo shell_exec('docker image prune -af').PHP_EOL;
+
 			echo '• Self destroy: ';
 			echo shell_exec('docker rm -f '.$spaceCargo.' 2>&1').PHP_EOL;
 		}

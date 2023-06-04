@@ -92,25 +92,31 @@ func (p *NodesPool) StoreNode(name string, node *Node) {
 }
 
 func (p *NodesPool) DeleteNode(key string) error {
-	if n, ok := p.nodes.Load(key); ok {
-		nn := n.(*Node)
-
-		log.Printf("node %q destroy with all containers", nn.Name)
-
-		p.queueMu.Lock()
-		p.queue[nn.getIP()] = append(p.queue[nn.getIP()], deployment.Request{
-			Destroy: true,
-		})
-		p.queueMu.Unlock()
-
-		go func(nodeName string) {
-			time.Sleep(20 * time.Second)
-			p.nodes.Delete(nodeName)
-			p.running.Delete(nodeName)
-		}(nn.Name)
-	} else {
+	n, ok := p.nodes.Load(key)
+	if !ok {
 		return fmt.Errorf("not found node")
 	}
+	nn := n.(*Node)
+
+	err := nn.Remove()
+	if err != nil {
+		return fmt.Errorf("remove yaml err: %s", err.Error())
+	}
+
+	log.Printf("node %q destroy with all containers", nn.Name)
+
+	p.queueMu.Lock()
+	p.queue[nn.getIP()] = append(p.queue[nn.getIP()], deployment.Request{
+		Destroy: true,
+	})
+	p.queueMu.Unlock()
+
+	go func(nodeName string) {
+		time.Sleep(20 * time.Second)
+		p.nodes.Delete(nodeName)
+		p.running.Delete(nodeName)
+	}(nn.Name)
+
 	return nil
 }
 

@@ -23,44 +23,63 @@ export default {
     }
   },
   created() {
-    this.get()
+    this.getRepos()
+        .then((repos) => {
+          repos.forEach(repo => this.list[repo] = {})
+          repos.forEach(repo => this.getManifests(repo))
+        })
+        .catch((e) => {
+          this.totalSizeView = document.URL.split('/', 3).join('/')
+              + '/v2/ – entrypoint is not api registry hub';
+          this.err = e;
+        })
   },
   methods: {
-    get() {
-      this.$fetch('/v2/_catalog').then((catalog) => {
-        catalog.repositories.forEach((repo) => {
-          this.$fetch('/v2/' + repo + '/manifests/latest', {
-            headers: {'Accept': 'application/vnd.docker.distribution.manifest.list.v2+json'}
-          }).then((m) => {
-            m.manifests.forEach((e) => {
-              if (!this.list[repo]) {
-                this.list[repo] = {};
-              }
-              this.list[repo][e.platform.os + '/' + e.platform.architecture] = '';
-              this.getSize(repo, e.platform.os + '/' + e.platform.architecture, e.digest);
-            });
-          });
+    getRepos() {
+      return new Promise((resolve, reject) => {
+        this.$fetch('/v2/_catalog').then((catalog) => {
+          resolve(catalog.repositories)
+        }).catch((e) => {
+          reject(e)
         });
-      }).catch((e) => {
-        this.totalSizeView = document.URL.split('/', 3).join('/')
-          + '/v2/ – entrypoint is not api registry hub';
-        this.err = e;
+      })
+    },
+
+    getManifests(repo) {
+      this.$fetch('/v2/' + repo + '/manifests/latest', {
+        headers: {
+          'Accept':
+              'application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.index.v1+json'
+        }
+      }).then((m) => {
+        m.manifests.forEach((e) => {
+          if (e.platform.os === 'unknown') {
+            return
+          }
+          this.list[repo][e.platform.os + '/' + e.platform.architecture] = '';
+          this.getSize(repo, e.platform.os + '/' + e.platform.architecture, e.digest);
+        });
       });
     },
 
     getSize(repo, osPlatform, digest) {
       return this.$fetch('/v2/' + repo + '/manifests/' + digest, {
-        headers: {'Accept': 'application/vnd.docker.distribution.manifest.list.v2+json'}
+        headers: {
+          'Accept':
+              'application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json'
+        }
       }).then((d) => {
         if (d.errors) {
-          console.error(d.errors);
+          console.error(repo, d.errors);
+          delete this.list[repo]
+          return
         }
         let size = 0;
-        d.layers.map((e) => size += e.size)
+        d?.layers?.map((e) => size += e.size)
         this.list[repo][osPlatform] = (size / 1024 / 1024).toFixed(2) + ' MB';
         this.totalSize += size;
         this.totalSizeView =
-          'Total compressed size: ' + (this.totalSize / 1024 / 1024).toFixed(2) + ' MB'
+            'Total compressed size: ' + (this.totalSize / 1024 / 1024).toFixed(2) + ' MB'
       });
     },
 
@@ -72,9 +91,9 @@ export default {
         method: 'GET',
         headers: {
           'Accept': 'application/vnd.docker.distribution.manifest.v2+json'
-            + ', application/vnd.oci.image.manifest.v1+json'
-            + ', application/vnd.docker.distribution.manifest.list.v2+json'
-            + ', application/vnd.oci.image.index.v1+json'
+              + ', application/vnd.oci.image.manifest.v1+json'
+              + ', application/vnd.docker.distribution.manifest.list.v2+json'
+              + ', application/vnd.oci.image.index.v1+json'
         }
       }).then((m) => {
         if (m.errors) {
@@ -87,7 +106,7 @@ export default {
             method: 'DELETE',
             headers: {
               'Accept': 'application/vnd.docker.distribution.manifest.v2+json'
-                + ', application/vnd.oci.image.manifest.v1+json'
+                  + ', application/vnd.oci.image.manifest.v1+json'
             }
           }, (d) => {
             console.info("delete manifest: ", d);

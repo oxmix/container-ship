@@ -40,7 +40,7 @@ func loadingNodes(pool *NodesPool) error {
 }
 
 type Node struct {
-	Location    string
+	location    string
 	IPv4        string   `yaml:"IPv4,omitempty"`
 	IPv6        string   `yaml:"IPv6,omitempty"`
 	Name        string   `yaml:"name"`
@@ -64,7 +64,7 @@ func loadNode(f fs.FileInfo, dirNodes string) (*Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("in file %q: %v", f.Name(), err)
 	}
-	node.Location = location
+	node.location = location
 
 	return node, nil
 }
@@ -87,9 +87,9 @@ func (n Node) Save(p Worker) error {
 		return err
 	}
 
-	n.Location = p.GetDirNodes() + "/" + n.Name + ".yaml"
+	n.location = p.GetDirNodes() + "/" + n.Name + ".yaml"
 
-	err = ioutil.WriteFile(n.Location, yamlData, 0644)
+	err = ioutil.WriteFile(n.location, yamlData, 0644)
 	if err != nil {
 		return err
 	}
@@ -104,18 +104,8 @@ func (n Node) Save(p Worker) error {
 	return nil
 }
 
-func (n Node) Remove(name string, p Worker) error {
-	err := os.Remove(n.Location)
-	if err != nil {
-		return err
-	}
-
-	err = p.DeleteNode(name)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (n Node) Remove() error {
+	return os.Remove(n.location)
 }
 
 func (n Node) ExistsDeployment(name string) bool {
