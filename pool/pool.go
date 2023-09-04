@@ -89,6 +89,11 @@ func (p *NodesPool) GetDirNodes() string {
 
 func (p *NodesPool) StoreNode(name string, node *Node) {
 	p.nodes.Store(name, node)
+
+	// cleaning previous queue if exists
+	defer p.queueMu.Unlock()
+	p.queueMu.Lock()
+	delete(p.queue, node.getIP())
 }
 
 func (p *NodesPool) DeleteNode(key string) error {
