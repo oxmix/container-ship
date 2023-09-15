@@ -4,8 +4,8 @@ import (
 	u "ctr-ship/utils"
 	"encoding/hex"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -25,6 +25,7 @@ type Container struct {
 	Runtime     string   `yaml:"runtime,omitempty" json:"runtime"`
 	Pid         string   `yaml:"pid,omitempty" json:"pid"`
 	Privileged  bool     `yaml:"privileged,omitempty" json:"privileged"`
+	Hostname    string   `yaml:"hostname,omitempty" json:"hostname"`
 	Network     string   `yaml:"network,omitempty" json:"network"`
 	Restart     string   `yaml:"restart,omitempty" json:"restart"`
 	Caps        []string `yaml:"caps,omitempty" json:"caps"`
@@ -50,7 +51,7 @@ func (m Manifest) Save(dirManifests string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(dirManifests+"/"+m.GetDeploymentName()+".yaml", yamlData, 0644)
+	err = os.WriteFile(dirManifests+"/"+m.GetDeploymentName()+".yaml", yamlData, 0644)
 	if err != nil {
 		return err
 	}

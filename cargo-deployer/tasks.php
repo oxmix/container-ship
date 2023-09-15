@@ -116,6 +116,12 @@ class Tasks {
 		return $json;
 	}
 
+
+	public function info(): array {
+		$json = $this->requestDocker('http://localhost/info');
+		return json_decode($json, true);
+	}
+
 	public function containers(): array {
 		$json = $this->requestDocker(
 			'http://localhost/v1.40/containers/json?filters='.json_encode([
@@ -189,6 +195,14 @@ class Tasks {
 		if (!empty($e['privileged'])) {
 			$params .= ' --privileged';
 		}
+		if (!empty($e['hostname'])) {
+			if ($e['hostname'] === '$parentHostname') {
+				$e['hostname'] = $this->info()['Name'] ?? '';
+			}
+			if (!empty($e['hostname'])) {
+				$params .= ' --hostname '.$e['hostname'];
+			}
+		}
 		if (!empty($e['network'])) {
 			$params .= ' --network '.$e['network'];
 		}
@@ -214,7 +228,7 @@ class Tasks {
 			$params .= ' -e '.implode(' -e ', $e['environment']);
 		}
 		if (!empty($e['entrypoint'])) {
-		    $params .= ' --entrypoint '.$e['entrypoint'];
+			$params .= ' --entrypoint '.$e['entrypoint'];
 		}
 
 		return 'docker run -d'

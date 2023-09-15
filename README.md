@@ -23,6 +23,7 @@ curl -sk https://ctr-ship.domain.tld/connection | sudo bash -
 ```
 
 ### Apply deployment manifest
+`$parentHostname` is variable hostname parent/internal node, option if needs
 ```yaml
 curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary @- << 'EOF'
 space: my-project
@@ -30,6 +31,7 @@ name: test-deployment
 containers:
   - name: test-nginx
     from: nginx
+    hostname: $parentHostname
     stop-time: 30
     ports:
       - 8080:80
