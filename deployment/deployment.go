@@ -73,6 +73,7 @@ func (d *Deployment) CargoShell() []byte {
 function install {
 	if [[ $(uname) == 'Linux' ]]; then
 		if ! command -v $1 &> /dev/null; then
+			echo "• Install $2"
 			sudo apt update
 			sudo apt -y install $2
 		fi
@@ -80,8 +81,8 @@ function install {
 }
 
 
-echo "• Install docker.io"
 install docker docker.io
+install apparmor_status apparmor
 
 echo "• Pull oxmix/cargo-deployer"
 docker pull oxmix/cargo-deployer:` + u.Env().CargoVersion + `
