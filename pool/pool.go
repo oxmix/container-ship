@@ -437,10 +437,24 @@ func (p *NodesPool) logsAlert(node string, container string, l logsLine) {
 				continue
 			}
 			p.logsAlertSent.Store(hash, struct{}{})
+
+			var pretty bytes.Buffer
+			var format = "json"
+			err := json.Indent(&pretty, []byte(l.Mess), "", "  ")
+			if err != nil {
+				pretty.Write([]byte(l.Mess))
+				format = "text"
+			}
+			replacer := strings.NewReplacer(
+				"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
+				"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
+				"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
+				"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
+			)
 			go p.logsSendNotify(fmt.Sprintf(
-				"Node: %s\nContainer: %s\n\nTime: %s"+
-					"\nLink: https://"+u.Env().Endpoint+"/logs/"+node+"/"+container+"\n\nMessage:\n%s",
-				node, container, l.Time, l.Mess))
+				"```%s\n%s```[%s • *%s*](%s)",
+				format, pretty.Bytes(), replacer.Replace(node), replacer.Replace(container),
+				"https://"+u.Env().Endpoint+"/logs/"+node+"/"+container))
 			return
 		}
 	}
@@ -448,8 +462,9 @@ func (p *NodesPool) logsAlert(node string, container string, l logsLine) {
 
 func (p *NodesPool) logsSendNotify(message string) {
 	payload, err := json.Marshal(map[string]string{
-		"chat_id": u.Env().NotifyTgChatId,
-		"text":    message,
+		"chat_id":    u.Env().NotifyTgChatId,
+		"text":       message,
+		"parse_mode": "MarkdownV2",
 	})
 	if err != nil {
 		log.Printf("notify logs, err: %q", err.Error())
