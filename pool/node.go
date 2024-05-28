@@ -5,8 +5,6 @@ import (
 	u "ctr-ship/utils"
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -15,7 +13,7 @@ import (
 func loadingNodes(pool *NodesPool) error {
 	log.Println("loading nodes")
 
-	files, err := ioutil.ReadDir(pool.dirNodes)
+	files, err := os.ReadDir(pool.dirNodes)
 
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".yaml") {
@@ -51,9 +49,9 @@ type Node struct {
 	}
 }
 
-func loadNode(f fs.FileInfo, dirNodes string) (*Node, error) {
+func loadNode(f os.DirEntry, dirNodes string) (*Node, error) {
 	location := dirNodes + "/" + f.Name()
-	buf, err := ioutil.ReadFile(location)
+	buf, err := os.ReadFile(location)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +87,7 @@ func (n Node) Save(p Worker) error {
 
 	n.location = p.GetDirNodes() + "/" + n.Name + ".yaml"
 
-	err = ioutil.WriteFile(n.location, yamlData, 0644)
+	err = os.WriteFile(n.location, yamlData, 0644)
 	if err != nil {
 		return err
 	}

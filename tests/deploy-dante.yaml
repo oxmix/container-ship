@@ -4,7 +4,7 @@ containers:
   - name: dante
     from: vimagick/dante
     restart: unless-stopped
-    log-opt: max-size=5m
+    log-opt: max-size=128k
     ports:
       - 9180:1080
     executions:

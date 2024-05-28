@@ -19,13 +19,13 @@ Deployment of containers type master-workers fits for multiple regions, minimum 
 ### Connect machine, will be install `cargo-deployer`
 * Execute on the worker node
 ```shell
-curl -sk https://ctr-ship.domain.tld/connection | sudo bash -
+curl -sk https://ship.domain.tld/connection | sudo bash -
 ```
 
 ### Apply deployment manifest
 `$parentHostname` is variable hostname parent/internal node, option if needs
 ```yaml
-curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary @- << 'EOF'
+curl -kX POST https://ship.domain.tld/deployment --data-binary @- << 'EOF'
 space: my-project
 name: test-deployment
 containers:
@@ -40,7 +40,7 @@ EOF
 
 ### Add/update node to a ship
 ```yaml
-curl -kX POST https://ctr-ship.domain.tld/nodes/apply --data-binary @- << 'EOF'
+curl -kX POST https://ship.domain.tld/nodes/apply --data-binary @- << 'EOF'
 IPv4: 127.0.0.1
 name: localhost
 deployments:
@@ -51,19 +51,19 @@ EOF
 ### Delete node
 * All containers will be destroyed and `cargo-deployer` too
 ```shell
-curl -kX DELETE https://ctr-ship.domain.tld/nodes/apply?name=localhost
+curl -kX DELETE https://ship.domain.tld/nodes/apply?name=localhost
 ```
 
 ### Delete manifest deployment
 * All containers of manifest will be destroyed
 ```shell
-curl -kX DELETE https://ctr-ship.domain.tld/deployment?name=my-project.test-deployment
+curl -kX DELETE https://ship.domain.tld/deployment?name=my-project.test-deployment
 ```
 
 ### Magic environment
 * update node
 ```yaml
-curl -kX POST https://ctr-ship.domain.tld/nodes/apply --data-binary @- << 'EOF'
+curl -kX POST https://ship.domain.tld/nodes/apply --data-binary @- << 'EOF'
 IPv4: 127.0.0.1
 name: localhost
 deployments: 
@@ -75,7 +75,7 @@ EOF
 ```
 * auto replace in each manifest deployment if set equal node and variables {}
 ```yaml
-curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary @- << 'EOF'
+curl -kX POST https://ship.domain.tld/deployment --data-binary @- << 'EOF'
 space: example
 name: magick-envs-deployment
 containers:
@@ -92,7 +92,7 @@ EOF
 * To raise docker `registry:2`
 ```shell
 docker run -d --name docker-registry \
-    --restart always --log-driver json-file --log-opt max-size=5m \
+    --restart always --log-driver json-file --log-opt max-size=128k \
     -p 127.0.0.1:5035:5035 \
     -v `pwd`/data:/var/lib/registry \
   registry:2
@@ -107,7 +107,7 @@ docker run -d --name container-ship \
     -e ENDPOINT=127.0.0.1:8443 \
     --restart always \
     --log-driver json-file \
-    --log-opt max-size=5m \
+    --log-opt max-size=128k \
 oxmix/container-ship
 ```
 
@@ -127,12 +127,12 @@ oxmix/container-ship
 
 ### Deployment through file
 ```shell
-curl -kX POST https://ctr-ship.domain.tld/deployment --data-binary "@test-deployment.yaml"
+curl -kX POST https://ship.domain.tld/deployment --data-binary "@test-deployment.yaml"
 ```
 
 ### Update node through file
 ```shell
-curl -kX POST https://ctr-ship.domain.tld/nodes/apply --data-binary "@localhost.yaml"
+curl -kX POST https://ship.domain.tld/nodes/apply --data-binary "@localhost.yaml"
 ```
 
 ### Tab `Nodes`

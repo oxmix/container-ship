@@ -4,8 +4,6 @@ import (
 	u "ctr-ship/utils"
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -94,10 +92,17 @@ else
 	echo "-"
 fi
 
-printf "• Run cargo container: "
-docker run -d --name ` + u.Env().Namespace + `.cargo-deployer \
+RT=
+if docker info 2>/dev/null | grep -i runtime | grep -q 'nvidia'; then
+	RT="--runtime=nvidia"
+	printf "• Run cargo container with runtime nvidia: "
+else
+	printf "• Run cargo container: "
+fi
+
+docker run -d --name ` + u.Env().Namespace + `.cargo-deployer $RT \
 	--label ` + u.Env().Namespace + `.deployment=` + u.Env().Namespace + `.` + CargoDeploymentName + ` \
-	--restart always --log-driver json-file --log-opt max-size=5m \
+	--restart always --log-driver json-file --log-opt max-size=128k \
 	-v /var/run/docker.sock:/var/run/docker.sock:rw \
 	` + envs + ` oxmix/cargo-deployer:` + u.Env().CargoVersion + ` 
 
@@ -108,7 +113,7 @@ exit 0
 func (d *Deployment) LoadingManifests() error {
 	log.Println("loading manifests")
 
-	files, err := ioutil.ReadDir(d.dirManifests)
+	files, err := os.ReadDir(d.dirManifests)
 
 	d.loadCargoDeployer()
 
@@ -129,8 +134,8 @@ func (d *Deployment) LoadingManifests() error {
 	return err
 }
 
-func (d *Deployment) read(f fs.FileInfo) (Manifest, error) {
-	buf, err := ioutil.ReadFile(d.dirManifests + "/" + f.Name())
+func (d *Deployment) read(f os.DirEntry) (Manifest, error) {
+	buf, err := os.ReadFile(d.dirManifests + "/" + f.Name())
 	if err != nil {
 		return Manifest{}, err
 	}

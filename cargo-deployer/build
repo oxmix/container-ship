@@ -21,7 +21,7 @@ case $1 in
     docker run -d --name ctr-ship.$NAME \
       --label ctr-ship.deployment=ctr-ship.$NAME-deployment \
       -v /var/run/docker.sock:/var/run/docker.sock:rw \
-      --log-driver json-file --log-opt max-size=5m \
+      --log-driver json-file --log-opt max-size=128k \
       $NAME-local
     docker image prune -f
     ;;

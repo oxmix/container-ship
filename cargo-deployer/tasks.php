@@ -235,7 +235,7 @@ class Tasks {
 			.' --name '.$e['name']
 			.' --label '.$this->namespaceDeployment($deploymentName)
 			.' --log-driver json-file'
-			.' --log-opt max-size=5m'
+			.' --log-opt max-size=128k'
 			.' '.$params
 			.' '.$e['from']
 			.(!empty($e['command']) ? ' '.$e['command'] : '');
@@ -259,6 +259,10 @@ class Tasks {
 		if (!empty($oldId)) {
 			echo '• Container rename'.PHP_EOL;
 			shell_exec('docker rename '.$dc['name'].' '.$dc['name'].'-old');
+		}
+
+        if (strpos(shell_exec('docker info 2>/dev/null | grep -i runtime'), 'nvidia') !== false) {
+		    $dc['runtime'] = 'nvidia';
 		}
 
 		echo '• Container run: ';

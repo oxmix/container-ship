@@ -430,33 +430,41 @@ func (p *NodesPool) logsParsing(node string, container string, logs []logsLine) 
 
 func (p *NodesPool) logsAlert(node string, container string, l logsLine) {
 	for _, word := range strings.Split(u.Env().NotifyMatch, "|") {
-		if strings.Contains(strings.ToLower(l.Mess), strings.ToLower(word)) {
-			hashSum := md5.Sum([]byte(node + container + l.Mess))
-			hash := hex.EncodeToString(hashSum[:])
-			if _, exists := p.logsAlertSent.Load(hash); exists {
-				continue
-			}
-			p.logsAlertSent.Store(hash, struct{}{})
-
-			var pretty bytes.Buffer
-			var format = "json"
-			err := json.Indent(&pretty, []byte(l.Mess), "", "  ")
-			if err != nil {
-				pretty.Write([]byte(l.Mess))
-				format = "text"
-			}
-			replacer := strings.NewReplacer(
-				"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
-				"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
-				"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
-				"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
-			)
-			go p.logsSendNotify(fmt.Sprintf(
-				"```%s\n%s```[%s • *%s*](%s)",
-				format, pretty.Bytes(), replacer.Replace(node), replacer.Replace(container),
-				"https://"+u.Env().Endpoint+"/logs/"+node+"/"+container))
-			return
+		if !strings.Contains(strings.ToLower(l.Mess), strings.ToLower(word)) {
+			continue
 		}
+
+		// replace "time": "..."
+		uniqMess := strings.Replace(l.Mess, l.Time.Format("2006-01-02T15:04:05Z07:00"), "", 1)
+		hashSum := md5.Sum([]byte(node + container + uniqMess))
+		hash := hex.EncodeToString(hashSum[:])
+		if _, exists := p.logsAlertSent.Load(hash); exists {
+			continue
+		}
+		go func(hash string) {
+			time.Sleep(15 * time.Minute)
+			p.logsAlertSent.Delete(hash)
+		}(hash)
+		p.logsAlertSent.Store(hash, struct{}{})
+
+		var pretty bytes.Buffer
+		var format = "json"
+		err := json.Indent(&pretty, []byte(l.Mess), "", "  ")
+		if err != nil {
+			pretty.Write([]byte(l.Mess))
+			format = "text"
+		}
+		replacer := strings.NewReplacer(
+			"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
+			"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
+			"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
+			"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
+		)
+		go p.logsSendNotify(fmt.Sprintf(
+			"```%s\n%s```[%s • *%s*](%s)",
+			format, pretty.Bytes(), replacer.Replace(node), replacer.Replace(container),
+			"https://"+u.Env().Endpoint+"/logs/"+node+"/"+container))
+		return
 	}
 }
 

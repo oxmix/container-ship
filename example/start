@@ -15,7 +15,7 @@ docker run -d --name container-ship \
   -e ENDPOINT=host.docker.internal:8443 \
   --restart always \
   --log-driver json-file \
-  --log-opt max-size=5m \
+  --log-opt max-size=128k \
 oxmix/container-ship
 
 sleep 3

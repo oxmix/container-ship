@@ -4,13 +4,13 @@ containers:
   - name: nginx1
     from: nginx
     restart: unless-stopped
-    log-opt: max-size=5m
+    log-opt: max-size=128k
     ports:
       - 8081:80
 
   - name: nginx2
     from: nginx
     restart: unless-stopped
-    log-opt: max-size=5m
+    log-opt: max-size=128k
     ports:
       - 8082:80

@@ -4,7 +4,6 @@ import (
 	"ctr-ship/pool"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +21,7 @@ func TestSuccess(t *testing.T) {
 			t.Error(err)
 		}
 	}(res.Body)
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Error(err)
 		return
@@ -53,7 +52,7 @@ func TestFailed(t *testing.T) {
 			t.Error(err)
 		}
 	}(res.Body)
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Error(err)
 		return

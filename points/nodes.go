@@ -5,7 +5,6 @@ import (
 	u "ctr-ship/utils"
 	"gopkg.in/yaml.v3"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -23,7 +22,7 @@ func Nodes(nodes pool.Worker) {
 			}
 		}(r.Body)
 
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Println("read error:", err)
 			return
@@ -72,7 +71,7 @@ func Nodes(nodes pool.Worker) {
 			}
 		}(r.Body)
 
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("node apply body read err: %q", err)
 			Failed(w, 400, err.Error())
