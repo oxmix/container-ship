@@ -46,7 +46,7 @@ func (d *Deployment) loadCargoDeployer() {
 		Containers: []Container{
 			{
 				Name:    "cargo-deployer",
-				From:    "oxmix/cargo-deployer:" + u.Env().CargoVersion,
+				From:    u.Env().CargoFrom,
 				Restart: "always",
 				Volumes: []string{
 					"/var/run/docker.sock:/var/run/docker.sock:rw",
@@ -82,8 +82,8 @@ function install {
 install docker docker.io
 install apparmor_status apparmor
 
-echo "• Pull oxmix/cargo-deployer"
-docker pull oxmix/cargo-deployer:` + u.Env().CargoVersion + `
+echo "• Pull ` + u.Env().CargoFrom + `"
+docker pull ` + u.Env().CargoFrom + `
 
 printf "• Kill cargo container: "
 if [[ $(docker ps -qaf name=` + u.Env().Namespace + `.cargo-deployer) ]]; then
@@ -104,7 +104,7 @@ docker run -d --name ` + u.Env().Namespace + `.cargo-deployer $RT \
 	--label ` + u.Env().Namespace + `.deployment=` + u.Env().Namespace + `.` + CargoDeploymentName + ` \
 	--restart always --log-driver json-file --log-opt max-size=128k \
 	-v /var/run/docker.sock:/var/run/docker.sock:rw \
-	` + envs + ` oxmix/cargo-deployer:` + u.Env().CargoVersion + ` 
+	` + envs + ` ` + u.Env().CargoFrom + `
 
 exit 0
 `)

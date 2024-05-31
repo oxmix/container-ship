@@ -105,10 +105,11 @@ docker run -d --name container-ship \
     -v $(pwd)/assets:/assets \
     -p 127.0.0.1:8443:8443 \
     -e ENDPOINT=127.0.0.1:8443 \
+    -e CARGO_FROM=mirror.gcr.io/oxmix/cargo-deployer:latest \
     --restart always \
     --log-driver json-file \
     --log-opt max-size=128k \
-oxmix/container-ship
+mirror.gcr.io/oxmix/container-ship
 ```
 
 ### Logs alert to telegram
