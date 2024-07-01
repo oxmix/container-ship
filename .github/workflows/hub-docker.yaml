@@ -43,6 +43,6 @@ jobs:
 
       - name: Building cargo-deployer images and push to hub
         run: |
-          docker buildx build --tag oxmix/cargo-deployer:1 \
+          docker buildx build --tag oxmix/cargo-deployer:1.1 \
                               --tag oxmix/cargo-deployer:latest \
                               --push --platform linux/amd64,linux/arm64 cargo-deployer

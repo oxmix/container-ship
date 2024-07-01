@@ -2,7 +2,7 @@
 set -e
 
 NAME='cargo-deployer'
-VERSION='1'
+VERSION='1.1'
 HUB='oxmix'
 
 case $1 in

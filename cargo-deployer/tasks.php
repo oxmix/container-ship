@@ -159,6 +159,9 @@ class Tasks {
 				if (!$time = substr($str, $offset, 30))
 					continue;
 
+				if (strtotime(substr($time, 0, 19)) === false)
+					continue;
+
 				$logs[] = [
 					'time' => $time,
 					'mess' => substr($str, $offset + 31),
