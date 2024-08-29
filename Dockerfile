@@ -1,4 +1,4 @@
-FROM --platform=linux/$BUILDARCH node:20-alpine as web
+FROM --platform=linux/$BUILDARCH node:20-alpine AS web
 WORKDIR /build
 COPY ./web .
 RUN npm i

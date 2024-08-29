@@ -28,7 +28,7 @@ class Tasks {
 					$this->containersExecute($result['data']['execs']);
 					echo '['.date('Y-m-d H:i:s').'] End deployments'.PHP_EOL;
 
-					$this->push();
+					continue;
 				}
 
 			} else {
