@@ -1,0 +1,11 @@
+space: tests
+name: oxi-proxy-deployment
+containers:
+  - name: oxi-proxy
+    from: oxmix/proxy
+    restart: unless-stopped
+    ports:
+      - 9180:1080
+    executions:
+      - htpasswd -cb /accounts user1 pass1 2>&1
+      - htpasswd -b /accounts user2 pass2 2>&1

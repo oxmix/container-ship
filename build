@@ -2,32 +2,34 @@
 set -e
 
 NAME='container-ship'
-VERSION='1.1'
+VERSION='2.0'
 HUB='oxmix'
 
 function tests() {
-    go test ./...
+  (cd ship && go test ./...)
 }
 
 case $1 in
   push)
     tests
-
+#--tag $HUB/$NAME:latest
     ! docker buildx rm $NAME-builder
+    trap 'docker buildx rm $NAME-builder' EXIT
     docker buildx create --name $NAME-builder --use
-    docker buildx build --tag $HUB/$NAME:$VERSION --tag $HUB/$NAME:latest --push \
-                        --platform linux/amd64,linux/arm64 .
-    docker buildx rm $NAME-builder
+    docker buildx build . --push \
+      --tag $HUB/$NAME:$VERSION \
+      --platform linux/amd64,linux/arm64
     docker buildx prune -f
     ;;
 
   local)
-    docker build -t $NAME-local .
+    docker build -t $HUB/$NAME:$VERSION .
     docker rm -f $NAME
     docker run -d --name $NAME \
+      -p 8080:8080 \
       -p 8443:8443 \
-      -v "$(pwd)/assets":/assets \
-      $NAME-local
+      -v "$(pwd)/ship/assets":/assets \
+      $HUB/$NAME:$VERSION
     docker image prune -f
     ;;
 

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+cat <<EOF > "$(dirname "$0")/../../ship/assets/nodes/localhost.yaml"
+key: -placeholder-key-
+IP: 127.0.0.1
+name: localhost
+deployments:
+  - tests.nginx-deployment
+  - tests.oxi-proxy-deployment
+EOF
+
+curl -k4X POST --data-binary "@deploy-nginx.yaml" https://localhost:8443/deployment
+curl -k4X POST --data-binary "@deploy-proxy.yaml" https://localhost:8443/deployment

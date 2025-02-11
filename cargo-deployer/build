@@ -2,28 +2,23 @@
 set -e
 
 NAME='cargo-deployer'
-VERSION='1.1'
+VERSION='2.0'
 HUB='oxmix'
 
 case $1 in
   push)
     ! docker buildx rm $NAME-builder
+    trap 'docker buildx rm $NAME-builder' EXIT
+    #--tag $HUB/$NAME:latest
     docker buildx create --name $NAME-builder --use
-    docker buildx build --tag $HUB/$NAME:$VERSION --tag $HUB/$NAME:latest --push \
-                        --platform linux/amd64,linux/arm64 .
-    docker buildx rm $NAME-builder
+    docker buildx build . --push \
+      --tag $HUB/$NAME:$VERSION \
+      --platform linux/amd64,linux/arm64
     docker buildx prune -f
     ;;
 
   local)
-    docker build -t $NAME-local .
-    docker rm -f ctr-ship.$NAME
-    docker run -d --name ctr-ship.$NAME \
-      --label ctr-ship.deployment=ctr-ship.$NAME-deployment \
-      -v /var/run/docker.sock:/var/run/docker.sock:rw \
-      --log-driver json-file --log-opt max-size=128k \
-      $NAME-local
-    docker image prune -f
+    docker build -t $HUB/$NAME:$VERSION .
     ;;
 
   *)

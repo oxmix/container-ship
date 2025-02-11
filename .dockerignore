@@ -3,6 +3,7 @@
 .idea
 .git
 .gitignore
+.github
 Dockerfile
 build
 cargo-deployer

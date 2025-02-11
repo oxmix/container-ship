@@ -1,0 +1,23 @@
+space: tests
+name: nginx-deployment
+canary:
+  delay: 5
+webhook: http://localhost/ok
+containers:
+  - name: nginx1
+    from: nginx
+    restart: unless-stopped
+    ports:
+      - 8081:80
+    environment:
+      - NGINX_KEY_1=uno
+      - NGINX_KEY_2=dos
+
+  - name: nginx2
+    from: nginx
+    restart: unless-stopped
+    ports:
+      - 8082:80
+    environment:
+      - NGINX_KEY_3=tres
+      - NGINX_KEY_4=cuatro
