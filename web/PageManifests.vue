@@ -178,7 +178,7 @@ function ago(seconds, locale) {
       <div :class="$style.label">Manifest yaml config</div>
       <textarea v-model="data" spellcheck="false" />
     </div>
-    <button @click="add">Add and Deploy</button>
+    <button @click="save">Add and Deploy</button>
   </popup-modal>
 
   <div v-for="(mans, space) in manifests" :key="space">
