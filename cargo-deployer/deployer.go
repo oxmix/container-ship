@@ -415,7 +415,7 @@ func NewHttpDocker() *http.Client {
 }
 
 func (t *Tasks) RequestDockerReader(endpoint string, method string, body io.Reader) (io.ReadCloser, error) {
-	req, err := http.NewRequest(method, "http://localhost/v1.40"+endpoint, body)
+	req, err := http.NewRequest(method, "http://localhost/v1.44"+endpoint, body)
 	if err != nil {
 		return nil, fmt.Errorf("docker request creating err: %w", err)
 	}
