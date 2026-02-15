@@ -102,6 +102,8 @@ containers:
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
       - others...
+    # ulimit nofile [noo-files: soft:hard]
+    noo-files: 10000:10000
     user: www-data
     hostname: custom-sample-name
     network-mode: host
@@ -171,7 +173,7 @@ function ago(seconds, locale) {
       <div :class="$style.label">Sample templates</div>
       <button @click="templateConfig">Paste with all params</button>
       <span style="margin: 0 5px" />
-      <button @click="templateCanary">Pate with canary deploy</button>
+      <button @click="templateCanary">Paste with canary deploy</button>
     </div>
 
     <div :class="$style['edit-form']">

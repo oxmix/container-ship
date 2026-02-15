@@ -2,16 +2,16 @@
 set -e
 
 NAME='cargo-deployer'
-VERSION='2.1'
+VERSION='2.2'
 HUB='oxmix'
 
 case $1 in
   push)
     ! docker buildx rm $NAME-builder
     trap 'docker buildx rm $NAME-builder' EXIT
-    #--tag $HUB/$NAME:latest
     docker buildx create --name $NAME-builder --use
     docker buildx build . --push \
+      --tag $HUB/$NAME:latest \
       --tag $HUB/$NAME:$VERSION \
       --platform linux/amd64,linux/arm64
     docker buildx prune -f

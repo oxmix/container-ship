@@ -2,7 +2,7 @@
 set -e
 
 NAME='container-ship'
-VERSION='2.1'
+VERSION='2.2'
 HUB='oxmix'
 
 function tests() {

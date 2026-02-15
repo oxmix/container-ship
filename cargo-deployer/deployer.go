@@ -96,6 +96,7 @@ type PullContainers struct {
 	Restart     string   `json:"restart"`
 	Caps        []string `json:"caps"`
 	Sysctls     []string `json:"sysctls"`
+	NoOFiles    string   `json:"noo-files"`
 	User        string   `json:"user"`
 	Hostname    string   `json:"hostname"`
 	NetworkMode string   `json:"network-mode"`
@@ -796,12 +797,19 @@ type HostConfig struct {
 	} `json:"RestartPolicy,omitempty"`
 	CapAdd       []string                 `json:"CapAdd,omitempty"`
 	Sysctls      map[string]string        `json:"Sysctls,omitempty"`
+	Ulimits      []Ulimit                 `json:"Ulimits,omitempty"`
 	NetworkMode  string                   `json:"NetworkMode,omitempty"`
 	ExtraHosts   []string                 `json:"ExtraHosts,omitempty"`
 	PortBindings map[string][]PortBinding `json:"PortBindings,omitempty"`
 	Mounts       []Mount                  `json:"Mounts,omitempty"`
 	Binds        []string                 `json:"Binds,omitempty"`
 	LogConfig    map[string]any           `json:"LogConfig"`
+}
+
+type Ulimit struct {
+	Name string `json:"Name"`
+	Soft int    `json:"Soft"`
+	Hard int    `json:"Hard"`
 }
 
 func (e *Executor) ContainerParams(cont PullContainers) *ContainerConfig {
@@ -845,6 +853,15 @@ func (e *Executor) ContainerParams(cont PullContainers) *ContainerConfig {
 				conf.HostConfig.Sysctls[parts[0]] = parts[1]
 			}
 		}
+	}
+	if nfs := strings.SplitN(cont.NoOFiles, ":", 2); len(nfs) == 2 {
+		soft, _ := strconv.Atoi(nfs[0])
+		hard, _ := strconv.Atoi(nfs[1])
+		conf.HostConfig.Ulimits = append(conf.HostConfig.Ulimits, Ulimit{
+			Name: "nofile",
+			Soft: soft,
+			Hard: hard,
+		})
 	}
 	if cont.User != "" {
 		conf.User = cont.User

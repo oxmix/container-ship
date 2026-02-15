@@ -35,6 +35,8 @@ type Container struct {
 	Restart     string   `yaml:"restart,omitempty" json:"restart"`
 	Caps        []string `yaml:"caps,omitempty" json:"caps"`
 	Sysctls     []string `yaml:"sysctls,omitempty" json:"sysctls"`
+	NoOFiles    string   `yaml:"noo-files,omitempty" json:"noo-files"`
+	User        string   `yaml:"user,omitempty" json:"user"`
 	Hostname    string   `yaml:"hostname,omitempty" json:"hostname"`
 	NetworkMode string   `yaml:"network-mode,omitempty" json:"network-mode"`
 	Hosts       []string `yaml:"hosts,omitempty" json:"hosts"`
