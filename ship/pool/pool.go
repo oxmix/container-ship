@@ -532,7 +532,7 @@ func (p *NodesPool) logsSendNotify(message string) {
 		log.Printf("notify logs, err: %q", err.Error())
 		return
 	}
-	response, err := http.Post("https://api.telegram.org/bot"+u.Env().NotifyTgToken+"/sendMessage",
+	response, err := http.Post(u.Env().NotifyTgEndpoint+u.Env().NotifyTgToken+"/sendMessage",
 		"application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		log.Printf("notify logs, err: %q", err.Error())

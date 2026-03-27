@@ -10,14 +10,15 @@ func getEnv(key string, def string) string {
 }
 
 type EnvDef struct {
-	Environment    string
-	Endpoint       string
-	Namespace      string
-	CargoFrom      string
-	CargoName      string
-	NotifyMatch    string
-	NotifyTgToken  string
-	NotifyTgChatId string
+	Environment      string
+	Endpoint         string
+	Namespace        string
+	CargoFrom        string
+	CargoName        string
+	NotifyMatch      string
+	NotifyTgToken    string
+	NotifyTgChatId   string
+	NotifyTgEndpoint string
 }
 
 func Env() *EnvDef {
@@ -30,5 +31,6 @@ func Env() *EnvDef {
 		getEnv("NOTIFY_MATCH", ""),
 		getEnv("NOTIFY_TG_TOKEN", ""),
 		getEnv("NOTIFY_TG_CHAT_ID", ""),
+		getEnv("NOTIFY_TG_ENDPOINT", "https://api.telegram.org/bot"),
 	}
 }
