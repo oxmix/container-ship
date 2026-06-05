@@ -73,18 +73,55 @@ oxmix/container-ship
 ```
 
 ### Logs alert to telegram
-* golang by matching: `fatal error:`|`panic:`
-* php by matching: `PHP Parse error`|`PHP Fatal error`|`PHP Warning`|`PHP Notice`
-* node by matching: `Error:`|`EvalError:`|`RangeError:`|`ReferenceError:`|`SyntaxError:`|`TypeError:`|`URIError:`
+Telegram credentials are passed via env:
 ```shell
 docker run ... \
   ...
-  -e NOTIFY_MATCH='fatal error:|panic:|my custom warning' \
   -e NOTIFY_TG_TOKEN=... \
   -e NOTIFY_TG_CHAT_ID=... \
   ...
 oxmix/container-ship
 ```
+
+Match and ignore patterns are loaded from files inside the mounted `assets/`:
+* `./assets/notify-match.list` — patterns that trigger an alert
+* `./assets/notify-ignore.list` — patterns that suppress an alert
+
+Format — one rule per line, `[container|]pattern`:
+* without `container|` prefix — rule applies to any container
+* `container` must match the full container name (e.g. `ship.mumble-voip`)
+* `pattern` — case-insensitive substring against the log line, may freely contain `:`
+* blank lines and lines starting with `#` are ignored
+
+Example `notify-match.list`:
+```
+# golang
+fatal error:
+panic:
+# php
+PHP Parse error
+PHP Fatal error
+PHP Warning
+PHP Notice
+# node
+Error:
+EvalError:
+RangeError:
+ReferenceError:
+SyntaxError:
+TypeError:
+URIError:
+```
+
+Example `notify-ignore.list`:
+```
+ship.mumble-voip|SSL handshake
+ship.mumble-voip|Connection timeout
+# global silence
+debug log
+```
+
+If `notify-match.list` is missing or empty — alerts are disabled.
 
 ### Deployment through file
 ```shell

@@ -15,7 +15,6 @@ type EnvDef struct {
 	Namespace        string
 	CargoFrom        string
 	CargoName        string
-	NotifyMatch      string
 	NotifyTgToken    string
 	NotifyTgChatId   string
 	NotifyTgEndpoint string
@@ -26,9 +25,8 @@ func Env() *EnvDef {
 		getEnv("ENV", "container"),
 		getEnv("ENDPOINT", "http://localhost:8080"),
 		getEnv("NAMESPACE", "ship"),
-		getEnv("CARGO_FROM", "oxmix/cargo-deployer:2.2"),
+		getEnv("CARGO_FROM", "oxmix/cargo-deployer:2.3"),
 		getEnv("CARGO_NAME", "cargo-deployer"),
-		getEnv("NOTIFY_MATCH", ""),
 		getEnv("NOTIFY_TG_TOKEN", ""),
 		getEnv("NOTIFY_TG_CHAT_ID", ""),
 		getEnv("NOTIFY_TG_ENDPOINT", "https://api.telegram.org/bot"),

@@ -51,6 +51,8 @@ type NodesPool struct {
 	logsMu        sync.Mutex
 	logsStorage   map[string][]LogsLine
 	logsAlertSent sync.Map
+	notifyMatch   []u.NotifyRule
+	notifyIgnore  []u.NotifyRule
 }
 
 func NewWorkerPool(dirManifests string, dirNodes string) *NodesPool {
@@ -77,6 +79,8 @@ func NewWorkerPool(dirManifests string, dirNodes string) *NodesPool {
 		logsMu:        sync.Mutex{},
 		logsStorage:   map[string][]LogsLine{},
 		logsAlertSent: sync.Map{},
+		notifyMatch:   u.LoadNotifyRules(dirManifests + "/../notify-match.list"),
+		notifyIgnore:  u.LoadNotifyRules(dirManifests + "/../notify-ignore.list"),
 	}
 
 	err = loadingNodes(np)
@@ -481,45 +485,61 @@ func (p *NodesPool) logsParsing(node string, container string, logs []LogsLine) 
 }
 
 func (p *NodesPool) logsAlert(node string, container string, l *LogsLine) {
-	if u.Env().NotifyMatch == "" {
+	if len(p.notifyMatch) == 0 {
 		return
 	}
-	for _, word := range strings.Split(u.Env().NotifyMatch, "|") {
-		if !strings.Contains(strings.ToLower(l.Message), strings.ToLower(word)) {
+	msgLower := strings.ToLower(l.Message)
+	matched := false
+	for _, r := range p.notifyMatch {
+		if r.Container != "" && r.Container != container {
 			continue
 		}
-
-		uniqMess := strings.Replace(l.Message, l.Time.Format("2006-01-02T15:04:05Z07:00"), "", 1)
-		hashSum := md5.Sum([]byte(node + container + uniqMess))
-		hash := hex.EncodeToString(hashSum[:])
-		if _, exists := p.logsAlertSent.Load(hash); exists {
-			continue
+		if strings.Contains(msgLower, r.Pattern) {
+			matched = true
+			break
 		}
-		go func(hash string) {
-			time.Sleep(15 * time.Minute)
-			p.logsAlertSent.Delete(hash)
-		}(hash)
-		p.logsAlertSent.Store(hash, struct{}{})
-
-		var pretty bytes.Buffer
-		var format = "json"
-		err := json.Indent(&pretty, []byte(l.Message), "", "  ")
-		if err != nil {
-			pretty.Write([]byte(l.Message))
-			format = "text"
-		}
-		replacer := strings.NewReplacer(
-			"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
-			"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
-			"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
-			"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
-		)
-		go p.logsSendNotify(fmt.Sprintf(
-			"```%s\n%s```[%s • *%s*](%s)",
-			format, pretty.Bytes(), replacer.Replace(node), replacer.Replace(container),
-			"https://"+u.Env().Endpoint+"/logs/"+node+"/"+container))
+	}
+	if !matched {
 		return
 	}
+	for _, r := range p.notifyIgnore {
+		if r.Container != "" && r.Container != container {
+			continue
+		}
+		if strings.Contains(msgLower, r.Pattern) {
+			return
+		}
+	}
+
+	uniqMess := strings.Replace(l.Message, l.Time.Format("2006-01-02T15:04:05Z07:00"), "", 1)
+	hashSum := md5.Sum([]byte(node + container + uniqMess))
+	hash := hex.EncodeToString(hashSum[:])
+	if _, exists := p.logsAlertSent.Load(hash); exists {
+		return
+	}
+	go func(hash string) {
+		time.Sleep(15 * time.Minute)
+		p.logsAlertSent.Delete(hash)
+	}(hash)
+	p.logsAlertSent.Store(hash, struct{}{})
+
+	var pretty bytes.Buffer
+	var format = "json"
+	err := json.Indent(&pretty, []byte(l.Message), "", "  ")
+	if err != nil {
+		pretty.Write([]byte(l.Message))
+		format = "text"
+	}
+	replacer := strings.NewReplacer(
+		"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
+		"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
+		"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
+		"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
+	)
+	go p.logsSendNotify(fmt.Sprintf(
+		"```%s\n%s```[%s • *%s*](%s)",
+		format, pretty.Bytes(), replacer.Replace(node), replacer.Replace(container),
+		"https://"+u.Env().Endpoint+"/logs/"+node+"/"+container))
 }
 
 func (p *NodesPool) logsSendNotify(message string) {
