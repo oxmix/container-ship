@@ -51,6 +51,7 @@ type NodeContainers struct {
 	Id           string            `json:"id"`
 	IdShort      string            `json:"idShort"`
 	Name         string            `json:"name"`
+	ImageVer     string            `json:"imageVer"`
 	ImageId      string            `json:"imageId"`
 	ImageIdShort string            `json:"imageIdShort"`
 	Labels       map[string]string `json:"labels"`
@@ -367,6 +368,49 @@ func (t *Tasks) Containers() (containers []NodeContainers) {
 		return s
 	}
 
+	imageCache := map[string]string{}
+	resolveImage := func(ref, id string) string {
+		if strings.Contains(ref, ":") || strings.Contains(ref, "@") {
+			return ref
+		}
+		key := id
+		if key == "" {
+			key = ref
+		}
+		if v, ok := imageCache[key]; ok {
+			return v
+		}
+		raw, err := t.RequestDocker("/images/"+key+"/json", "GET", nil)
+		if err != nil {
+			imageCache[key] = ref
+			return ref
+		}
+		var info struct {
+			RepoTags    []string `json:"RepoTags"`
+			RepoDigests []string `json:"RepoDigests"`
+		}
+		if err := json.Unmarshal(raw, &info); err != nil {
+			imageCache[key] = ref
+			return ref
+		}
+		for _, tag := range info.RepoTags {
+			if ref == "" || strings.HasPrefix(tag, ref+":") {
+				imageCache[key] = tag
+				return tag
+			}
+		}
+		if len(info.RepoTags) > 0 {
+			imageCache[key] = info.RepoTags[0]
+			return info.RepoTags[0]
+		}
+		if len(info.RepoDigests) > 0 {
+			imageCache[key] = info.RepoDigests[0]
+			return info.RepoDigests[0]
+		}
+		imageCache[key] = ref
+		return ref
+	}
+
 	for _, e := range arr {
 		var name string
 		if len(e.Names) > 0 {
@@ -385,6 +429,7 @@ func (t *Tasks) Containers() (containers []NodeContainers) {
 			Id:           e.Id,
 			IdShort:      shortStr(e.Id, 12),
 			Name:         name,
+			ImageVer:     resolveImage(e.Image, e.ImageID),
 			ImageId:      e.ImageID,
 			ImageIdShort: shortStr(e.ImageID, 12),
 			State:        e.State,

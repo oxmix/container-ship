@@ -16,12 +16,13 @@ type NodeStats struct {
 }
 
 type statesContainers struct {
-	Node    string `json:"node"`
-	Refresh int64  `json:"refresh"`
-	Space   string `json:"space"`
-	Name    string `json:"name"`
-	State   string `json:"state"`
-	Status  string `json:"status"`
+	Node     string `json:"node"`
+	Refresh  int64  `json:"refresh"`
+	Space    string `json:"space"`
+	Name     string `json:"name"`
+	ImageVer string `json:"imageVer"`
+	State    string `json:"state"`
+	Status   string `json:"status"`
 }
 
 func (p *NodesPool) States() map[string]map[string]map[string][]statesContainers {
@@ -74,6 +75,7 @@ func (p *NodesPool) States() map[string]map[string]map[string][]statesContainers
 					for key, sc := range out[spaceName][deployName][node.Name] {
 						if cont.Name == sc.Space+"."+sc.Name {
 							out[spaceName][deployName][node.Name][key].Refresh = time.Now().Unix() - rn.Update
+							out[spaceName][deployName][node.Name][key].ImageVer = cont.ImageVer
 							out[spaceName][deployName][node.Name][key].State = cont.State
 							out[spaceName][deployName][node.Name][key].Status = cont.Status
 						}

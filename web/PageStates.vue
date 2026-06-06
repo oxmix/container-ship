@@ -94,6 +94,7 @@ function refresh() {
         <thead>
           <tr>
             <td>container</td>
+            <td>version</td>
             <td>status</td>
             <td>node</td>
           </tr>
@@ -109,6 +110,9 @@ function refresh() {
                 <router-link :to="'/logs/'+host+'/'+namespace+'.'+n.name">
                   {{ n.name }}
                 </router-link>
+              </td>
+              <td>
+                <span v-if="n.imageVer" :class="$style.version">{{ n.imageVer.split(':')[1] }}</span>
               </td>
               <td>
                 <span class="label" :class="n.state || 'no-data'">{{ n.status.toLowerCase() }}</span>
@@ -127,7 +131,12 @@ function refresh() {
 </template>
 <style module>
 .deployments table td {
-  width: 33.3%;
+  width: 25%;
+}
+
+.version {
+  font-family: monospace;
+  opacity: .8;
 }
 
 .deployments table tbody tr {

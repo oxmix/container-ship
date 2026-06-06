@@ -13,6 +13,7 @@ type Node struct {
 		Id           string            `json:"id"`
 		IdShort      string            `json:"idShort"`
 		Name         string            `json:"name"`
+		ImageVer     string            `json:"imageVer"`
 		ImageId      string            `json:"imageId"`
 		ImageIdShort string            `json:"imageIdShort"`
 		Labels       map[string]string `json:"labels"`
