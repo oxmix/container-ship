@@ -86,6 +86,11 @@ function templateConfig() {
   data.value = `space: project
 name: nginx-ingress-deployment
 webhook: https://.../event-finish # optional
+# shared environment applied to all containers below,
+# container-level env with the same key overrides it
+environment:
+  - SHARED_ENV=common_value
+  - SHARED_SECRET={{PROJECT_SHARED_SECRET}}
 containers:
   - name: nginx-ingress
     from: nginx:latest

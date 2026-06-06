@@ -2,7 +2,6 @@
 set -e
 
 NAME='container-ship'
-VERSION='2.3'
 HUB='oxmix'
 
 function tests() {
@@ -16,20 +15,19 @@ case $1 in
     trap 'docker buildx rm $NAME-builder' EXIT
     docker buildx create --name $NAME-builder --use
     docker buildx build . --push \
-      --tag $HUB/$NAME:$VERSION \
       --tag $HUB/$NAME:latest \
       --platform linux/amd64,linux/arm64
     docker buildx prune -f
     ;;
 
   local)
-    docker build -t $HUB/$NAME:$VERSION .
+    docker build -t $HUB/$NAME:latest .
     docker rm -f $NAME
     docker run -d --name $NAME \
       -p 8080:8080 \
       -p 8443:8443 \
       -v "$(pwd)/ship/assets":/assets \
-      $HUB/$NAME:$VERSION
+      $HUB/$NAME:latest
     docker image prune -f
     ;;
 

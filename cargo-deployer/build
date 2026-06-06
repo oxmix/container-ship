@@ -2,7 +2,6 @@
 set -e
 
 NAME='cargo-deployer'
-VERSION='2.3'
 HUB='oxmix'
 
 case $1 in
@@ -12,13 +11,12 @@ case $1 in
     docker buildx create --name $NAME-builder --use
     docker buildx build . --push \
       --tag $HUB/$NAME:latest \
-      --tag $HUB/$NAME:$VERSION \
       --platform linux/amd64,linux/arm64
     docker buildx prune -f
     ;;
 
   local)
-    docker build -t $HUB/$NAME:$VERSION .
+    docker build -t $HUB/$NAME:latest .
     ;;
 
   *)

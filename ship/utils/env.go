@@ -25,7 +25,7 @@ func Env() *EnvDef {
 		getEnv("ENV", "container"),
 		getEnv("ENDPOINT", "http://localhost:8080"),
 		getEnv("NAMESPACE", "ship"),
-		getEnv("CARGO_FROM", "oxmix/cargo-deployer:2.3"),
+		getEnv("CARGO_FROM", "oxmix/cargo-deployer:latest"),
 		getEnv("CARGO_NAME", "cargo-deployer"),
 		getEnv("NOTIFY_TG_TOKEN", ""),
 		getEnv("NOTIFY_TG_CHAT_ID", ""),

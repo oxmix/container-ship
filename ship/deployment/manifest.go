@@ -12,12 +12,13 @@ import (
 )
 
 type Manifest struct {
-	LastModify int64  `yaml:"last-modify,omitempty"`
-	Space      string `yaml:"space"`
-	Name       string `yaml:"name"`
-	Canary     Canary `yaml:"canary,omitempty"`
-	Webhook    string `yaml:"webhook,omitempty"`
-	Containers []Container
+	LastModify  int64    `yaml:"last-modify,omitempty"`
+	Space       string   `yaml:"space"`
+	Name        string   `yaml:"name"`
+	Canary      Canary   `yaml:"canary,omitempty"`
+	Webhook     string   `yaml:"webhook,omitempty"`
+	Environment []string `yaml:"environment,omitempty"`
+	Containers  []Container
 }
 
 type Canary struct {
@@ -86,6 +87,11 @@ func (m *Manifest) ExistsContainer(name string) bool {
 }
 
 func (m *Manifest) ExistsMagicEnv(name string) bool {
+	for _, env := range m.Environment {
+		if strings.Contains(env, "{{"+name+"}}") {
+			return true
+		}
+	}
 	for _, n := range m.Containers {
 		for _, env := range n.Environment {
 			if strings.Contains(env, "{{"+name+"}}") {

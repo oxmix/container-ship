@@ -380,7 +380,17 @@ func (p *NodesPool) GetQueue(ip string) []deployment.Request {
 }
 
 func (p *NodesPool) addQueueList(dm *deployment.Manifest, destroy, alive bool, node *NodeConf) {
-	containers := p.magicEnvs(node.Name, dm.Containers)
+	containers := make([]deployment.Container, len(dm.Containers))
+	copy(containers, dm.Containers)
+	if len(dm.Environment) > 0 {
+		for k := range containers {
+			merged := make([]string, 0, len(dm.Environment)+len(containers[k].Environment))
+			merged = append(merged, dm.Environment...)
+			merged = append(merged, containers[k].Environment...)
+			containers[k].Environment = merged
+		}
+	}
+	containers = p.magicEnvs(node.Name, containers)
 	for k := range containers {
 		containers[k].NameUnique = dm.GetContainerNameRand(containers[k].Name)
 		containers[k].Name = dm.GetContainerName(containers[k].Name)

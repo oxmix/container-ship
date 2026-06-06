@@ -57,6 +57,29 @@ EOF
 ```
 
 
+### Shared environment for all containers
+* declared at deployment level, applied to every container below
+* container-level env with the same key overrides the shared one
+* supports magic variables `{{...}}` the same way as container env
+```yaml
+curl -kX POST https://ship.domain.tld/deployment --data-binary @- << 'EOF'
+space: example
+name: shared-envs-deployment
+environment:
+  - LOG_LEVEL=info
+  - SHARED_SECRET={{PROJECT_SHARED_SECRET}}
+containers:
+  - name: api-1
+    from: nginx
+    environment:
+      - UNIQUE_FOR_API1=x
+  - name: api-2
+    from: nginx
+    environment:
+      - UNIQUE_FOR_API2=y
+EOF
+```
+
 ### Manual raise master daemon `container-ship`
 ```shell
 mkdir $(pwd)/assets && \
