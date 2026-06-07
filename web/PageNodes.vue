@@ -13,6 +13,9 @@ let updater = null
 const showAddDeployment = ref(false)
 const nameNodeToDeploy = ref('')
 const nameDeployment = ref('')
+const manifestsList = ref([])
+const suggestOpen = ref(false)
+const suggestIndex = ref(-1)
 
 onMounted(() => {
   refresh()
@@ -69,7 +72,71 @@ function connectCommand() {
 function openAddDeployment(name) {
   nameNodeToDeploy.value = name
   nameDeployment.value = ''
+  manifestsList.value = []
+  suggestOpen.value = false
+  suggestIndex.value = -1
+  fetch('/internal/manifests').then(r => {
+    if (!r.ok) {
+      return
+    }
+    const existing = nodes.value?.find(n => n.name === name)?.deployments || {}
+    const taken = new Set()
+    Object.entries(existing).forEach(([space, deps]) => {
+      deps.forEach(d => taken.add(space === '!without' ? d : `${space}.${d}`))
+    })
+    manifestsList.value = (r.data || [])
+      .map(m => m.name)
+      .filter(n => !taken.has(n))
+  })
   showAddDeployment.value = !showAddDeployment.value
+}
+
+const filteredManifests = () => {
+  const q = nameDeployment.value.toLowerCase().trim()
+  const list = manifestsList.value
+  if (!q) return list
+  return list.filter(n => n.toLowerCase().includes(q))
+}
+
+function highlight(name) {
+  const q = nameDeployment.value.trim()
+  if (!q) return [{t: 'text', v: name}]
+  const i = name.toLowerCase().indexOf(q.toLowerCase())
+  if (i < 0) return [{t: 'text', v: name}]
+  return [
+    {t: 'text', v: name.slice(0, i)},
+    {t: 'mark', v: name.slice(i, i + q.length)},
+    {t: 'text', v: name.slice(i + q.length)}
+  ]
+}
+
+function pickManifest(name) {
+  nameDeployment.value = name
+  suggestOpen.value = false
+  suggestIndex.value = -1
+}
+
+function onSuggestKey(e) {
+  const list = filteredManifests()
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    suggestOpen.value = true
+    suggestIndex.value = Math.min(suggestIndex.value + 1, list.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    suggestIndex.value = Math.max(suggestIndex.value - 1, 0)
+  } else if (e.key === 'Enter') {
+    if (suggestOpen.value && suggestIndex.value >= 0 && list[suggestIndex.value]) {
+      e.preventDefault()
+      pickManifest(list[suggestIndex.value])
+    }
+  } else if (e.key === 'Escape') {
+    suggestOpen.value = false
+  }
+}
+
+function onSuggestBlur() {
+  setTimeout(() => suggestOpen.value = false, 120)
 }
 
 function delNode(name) {
@@ -193,7 +260,36 @@ function delDeployment(space, name, node) {
       <h2>Add deployment to {{ nameNodeToDeploy }}</h2>
       <div :class="$style['edit-form']">
         <div :class="$style.label">Name manifest</div>
-        <input v-model="nameDeployment" type="text" placeholder="example: project.nginx-deployment">
+        <div :class="$style.suggest">
+          <input
+            v-model="nameDeployment"
+            type="text"
+            placeholder="example: project.nginx-deployment"
+            autocomplete="off"
+            spellcheck="false"
+            @focus="suggestOpen = true"
+            @input="suggestOpen = true; suggestIndex = -1"
+            @blur="onSuggestBlur"
+            @keydown="onSuggestKey"
+          >
+          <div
+            v-if="suggestOpen && filteredManifests().length"
+            :class="$style['suggest-list']"
+          >
+            <div
+              v-for="(m, i) in filteredManifests()"
+              :key="m"
+              :class="[$style['suggest-item'], {[$style.active]: i === suggestIndex}]"
+              @mouseenter="suggestIndex = i"
+              @mousedown.prevent="pickManifest(m)"
+            >
+              <template v-for="(part, k) in highlight(m)" :key="k">
+                <b v-if="part.t === 'mark'">{{ part.v }}</b>
+                <span v-else>{{ part.v }}</span>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
       <button @click="addDeployment">Add</button>
     </popup-modal>
@@ -318,5 +414,51 @@ function delDeployment(space, name, node) {
 .edit-form input {
   min-width: auto;
   width: 66%;
+}
+
+.suggest {
+  position: relative;
+  width: 66%;
+}
+
+.suggest input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.suggest-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .12);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 50;
+  padding: 4px;
+}
+
+.suggest-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: .9rem;
+  border-radius: 6px;
+  line-height: 1.2;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggest-item b {
+  font-weight: 600;
+  color: #1763d6;
+}
+
+.suggest-item.active {
+  background: rgba(23, 99, 214, .12);
 }
 </style>
