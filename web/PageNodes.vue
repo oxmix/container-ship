@@ -17,6 +17,10 @@ const manifestsList = ref([])
 const suggestOpen = ref(false)
 const suggestIndex = ref(-1)
 
+const editSignal = ref(null)
+const editName = ref('')
+const editData = ref('')
+
 onMounted(() => {
   refresh()
   updater = setInterval(() => refresh(), 3000);
@@ -139,6 +143,43 @@ function onSuggestBlur() {
   setTimeout(() => suggestOpen.value = false, 120)
 }
 
+function editDeployment(space, name) {
+  const fullName = space === '!without' ? name : `${space}.${name}`
+  fetch('/internal/manifests').then(r => {
+    if (!r.ok) {
+      return Alert(r.message)
+    }
+    const manifest = (r.data || []).find(m => m.name === fullName)
+    if (!manifest) {
+      return Alert('Not found manifest', [fullName])
+    }
+    editName.value = fullName
+    editData.value = manifest.config
+    editSignal.value = !editSignal.value
+  })
+}
+
+function saveDeployment() {
+  fetch('/internal/manifests', {
+    method: 'POST',
+    data: {
+      data: editData.value
+    }
+  }).then(r => {
+    if (!r.ok) {
+      return Alert(r.message)
+    }
+    if (r.data['without-deploy']) {
+      Alert('Only saved', ['no sets nodes for deployment'])
+    } else {
+      Alert('Saved and sent signal for deployment to nodes:', r.data)
+    }
+    editSignal.value = null
+    editData.value = ''
+    refresh()
+  })
+}
+
 function delNode(name) {
   Delete([name, 'destroy all deployments of ' + name, 'destroy cargo-deployer of ' + name]).then(() => {
     Confirm('Are you sure?', [name]).then(() => {
@@ -244,7 +285,11 @@ function delDeployment(space, name, node) {
                 <legend>{{ space }}<span>space</span></legend>
                 <ul :class="$style['list-deployments']">
                   <li v-for="name in deps" :key="name" :class="$style['mod-btn']">
-                    <span :class="$style.name">{{ name }}</span>
+                    <span
+                      :class="[$style.name, $style.editable]"
+                      title="edit manifest"
+                      @click="editDeployment(space, name)"
+                    >{{ name }}</span>
                     <span :class="$style.del" @click="delDeployment(space, name, e.name)" />
                   </li>
                 </ul>
@@ -292,6 +337,15 @@ function delDeployment(space, name, node) {
         </div>
       </div>
       <button @click="addDeployment">Add</button>
+    </popup-modal>
+
+    <popup-modal :open="editSignal">
+      <h2>Edit manifest: {{ editName }}</h2>
+      <div :class="$style['edit-form']">
+        <div :class="$style.label">Manifest yaml config</div>
+        <textarea v-model="editData" spellcheck="false" />
+      </div>
+      <button @click="saveDeployment">Save and Deploy</button>
     </popup-modal>
   </div>
 </template>
@@ -380,6 +434,15 @@ function delDeployment(space, name, node) {
   border-radius: 8px;
 }
 
+.nodes li.mod-btn .name.editable {
+  cursor: pointer;
+}
+
+.nodes li.mod-btn .name.editable:hover {
+  background-color: var(--bg-05);
+  color: #feab3a;
+}
+
 .nodes li.mod-btn .del {
   padding: 4px 8px 4px 6px;
   border-radius: 8px;
@@ -414,6 +477,13 @@ function delDeployment(space, name, node) {
 .edit-form input {
   min-width: auto;
   width: 66%;
+}
+
+.edit-form textarea {
+  min-width: 100%;
+  height: 600px;
+  line-height: 20px;
+  white-space: nowrap;
 }
 
 .suggest {
