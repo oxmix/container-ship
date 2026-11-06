@@ -1,19 +1,21 @@
-FROM --platform=linux/$BUILDARCH node:20-alpine AS web
+FROM --platform=linux/$BUILDARCH node:23-alpine AS web
 WORKDIR /build
 COPY ./web .
 RUN npm i
 RUN npm run build:production
 
-FROM golang:1.22-alpine AS app
+FROM golang:1.26-alpine AS app
 WORKDIR /app
 COPY ./ship/go.* .
 RUN go mod download
 COPY ./ship .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ship .
 
-FROM alpine:3.18
+FROM alpine:3.23
 LABEL maintainer="Oxi <oxmix@me.com>"
-COPY --from=app /app/ship .
-COPY --from=web /build/dist /web/dist
+RUN addgroup -S app && adduser -S -D -H -G app app
+COPY --from=app --chown=app: /app/ship .
+COPY --from=web --chown=app: /build/dist /web/dist
+USER app
 EXPOSE 8443
 CMD ["./ship"]

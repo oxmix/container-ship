@@ -39,6 +39,17 @@ containers:
 EOF
 ```
 
+### Interactive container stdin
+Set `stdin: true` to keep the container stdin open so it can be attached later with `docker attach`.
+Set `tty: true` only when the application requires a TTY. Both options are disabled by default.
+```yaml
+containers:
+  - name: api
+    from: my-api:latest
+    stdin: true
+    tty: false
+```
+
 ### Magic environment
 * update node
 * auto replace in each manifest deployment if set equal node and variables {}

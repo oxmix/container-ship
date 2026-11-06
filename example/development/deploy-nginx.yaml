@@ -6,6 +6,8 @@ webhook: http://localhost/ok
 containers:
   - name: nginx1
     from: nginx
+    stdin: true
+    tty: false
     restart: unless-stopped
     ports:
       - 8081:80

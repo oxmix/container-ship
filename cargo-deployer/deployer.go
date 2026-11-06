@@ -108,6 +108,8 @@ type PullContainers struct {
 	Environment []string `json:"environment"`
 	Entrypoint  string   `json:"entrypoint"`
 	Command     string   `json:"command"`
+	Stdin       bool     `json:"stdin"`
+	TTY         bool     `json:"tty"`
 	Executions  []string `json:"executions"`
 }
 
@@ -821,6 +823,9 @@ type Mount struct {
 
 type ContainerConfig struct {
 	Image        string              `json:"Image"`
+	OpenStdin    bool                `json:"OpenStdin,omitempty"`
+	StdinOnce    bool                `json:"StdinOnce,omitempty"`
+	Tty          bool                `json:"Tty,omitempty"`
 	StopTimeout  int                 `json:"StopTimeout"`
 	Labels       map[string]string   `json:"Labels,omitempty"`
 	Env          []string            `json:"Env,omitempty"`
@@ -859,7 +864,10 @@ type Ulimit struct {
 
 func (e *Executor) ContainerParams(cont PullContainers) *ContainerConfig {
 	conf := &ContainerConfig{
-		Image: cont.From,
+		Image:     cont.From,
+		OpenStdin: cont.Stdin,
+		StdinOnce: false,
+		Tty:       cont.TTY,
 		Labels: map[string]string{
 			e.namespaceShip + ".deployment": e.deploymentName,
 		},

@@ -47,6 +47,8 @@ type Container struct {
 	Environment []string `yaml:"environment,omitempty" json:"environment"`
 	Entrypoint  string   `yaml:"entrypoint,omitempty" json:"entrypoint"`
 	Command     string   `yaml:"command,omitempty" json:"command"`
+	Stdin       bool     `yaml:"stdin,omitempty" json:"stdin"`
+	TTY         bool     `yaml:"tty,omitempty" json:"tty"`
 	Executions  []string `yaml:"executions,omitempty" json:"executions"`
 }
 
